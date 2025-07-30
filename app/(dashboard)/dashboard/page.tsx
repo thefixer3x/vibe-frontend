@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import { OrchestratorInterface } from '@/components/orchestrator/OrchestratorInterface';
 
 type ActionState = {
   error?: string;
@@ -272,16 +273,30 @@ function InviteTeamMember() {
 export default function SettingsPage() {
   return (
     <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium mb-6">Team Settings</h1>
-      <Suspense fallback={<SubscriptionSkeleton />}>
-        <ManageSubscription />
-      </Suspense>
-      <Suspense fallback={<TeamMembersSkeleton />}>
-        <TeamMembers />
-      </Suspense>
-      <Suspense fallback={<InviteTeamMemberSkeleton />}>
-        <InviteTeamMember />
-      </Suspense>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Left column - Team Settings */}
+        <div className="xl:col-span-2 space-y-6">
+          <h1 className="text-lg lg:text-2xl font-medium">Team Settings</h1>
+          <Suspense fallback={<SubscriptionSkeleton />}>
+            <ManageSubscription />
+          </Suspense>
+          <Suspense fallback={<TeamMembersSkeleton />}>
+            <TeamMembers />
+          </Suspense>
+          <Suspense fallback={<InviteTeamMemberSkeleton />}>
+            <InviteTeamMember />
+          </Suspense>
+        </div>
+        
+        {/* Right column - Orchestrator */}
+        <div className="xl:col-span-1">
+          <div className="sticky top-4">
+            <div className="h-[600px]">
+              <OrchestratorInterface />
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

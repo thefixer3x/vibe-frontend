@@ -3,6 +3,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { SWRConfig } from 'swr';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: 'Vibe - Universal API Warehouse',
@@ -34,6 +35,7 @@ export default function RootLayout({
           }}
         >
           {children}
+          <Toaster />
         </SWRConfig>
       </body>
     </html>
