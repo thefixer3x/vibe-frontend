@@ -4,9 +4,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { orchestratorService, OrchestratorResult, OrchestratorCommand } from '@/lib/orchestrator/service';
 import { aiAgentService, Message as AIMessage } from '@/lib/ai-agent/service';
+import { memoryClient } from '@/lib/memory/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Brain, Send, Loader2, CheckCircle, XCircle, Bot, User } from 'lucide-react';
+import { Brain, Send, Loader2, CheckCircle, XCircle, Bot, User, Zap } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -44,6 +45,7 @@ export function OrchestratorInterface({
   const [serviceStatuses, setServiceStatuses] = useState<any[]>([]);
   const [conversationHistory, setConversationHistory] = useState<AIMessage[]>([]);
   const [mode, setMode] = useState<'orchestrator' | 'ai-agent'>(useAIAgent ? 'ai-agent' : 'orchestrator');
+  const [mcpStatus, setMcpStatus] = useState<{ connected: boolean; mode: 'local' | 'remote' | 'disconnected' | 'disabled' }>({ connected: false, mode: 'disconnected' });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +58,20 @@ export function OrchestratorInterface({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    // Check MCP status
+    const updateMCPStatus = () => {
+      const status = memoryClient.getMCPConnectionStatus();
+      setMcpStatus(status);
+    };
+    
+    updateMCPStatus();
+    // Update every 5 seconds
+    const interval = setInterval(updateMCPStatus, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Add welcome message and check service status
@@ -235,9 +251,14 @@ Type your command below and press Enter!`;
   };
 
   const formatSuccessResult = (result: OrchestratorResult): string => {
-    const { command, data, executionTime } = result;
+    const { command, data, executionTime, mcpMode } = result;
     
     let content = `✅ **${command.tool}.${command.action}** (${executionTime}ms)`;
+    
+    // Add MCP mode indicator if available
+    if (mcpMode && mcpMode !== 'disabled') {
+      content += ` [MCP ${mcpMode}]`;
+    }
     
     // Format based on command type
     switch (command.tool) {
@@ -381,6 +402,16 @@ Type your command below and press Enter!`;
                   {service.name}
                 </Badge>
               ))}
+              {/* MCP Status Badge */}
+              {mcpStatus.connected && (
+                <Badge
+                  variant="outline"
+                  className="text-xs border-purple-500 text-purple-700 dark:text-purple-300"
+                >
+                  <Zap className="w-3 h-3 mr-1" />
+                  MCP {mcpStatus.mode === 'local' ? 'Local' : 'Remote'}
+                </Badge>
+              )}
             </div>
           )}
           <div className="text-xs text-gray-500">

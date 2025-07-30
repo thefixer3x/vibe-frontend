@@ -1,3 +1,5 @@
+import { getMCPClient, MCPClient } from '@/lib/mcp/client';
+
 interface Memory {
   id: string;
   title: string;
@@ -55,11 +57,31 @@ interface MemoryStats {
 class MemoryClient {
   private baseUrl: string;
   private apiKey: string | null = null;
+  private mcpClient: MCPClient | null = null;
+  private useMCP: boolean = true;
 
   constructor() {
     // Use environment variables or fallback to API proxy
     this.baseUrl = process.env.NEXT_PUBLIC_MEMORY_API_URL || '/api/memory';
     this.apiKey = process.env.NEXT_PUBLIC_MEMORY_API_KEY || null;
+    
+    // Initialize MCP client if enabled
+    if (this.useMCP) {
+      this.mcpClient = getMCPClient({
+        mode: 'auto',
+        apiKey: this.apiKey || undefined
+      });
+    }
+  }
+
+  async ensureMCPConnected(): Promise<boolean> {
+    if (!this.mcpClient || !this.useMCP) return false;
+    
+    if (!this.mcpClient.isConnectedToServer()) {
+      return await this.mcpClient.connect();
+    }
+    
+    return true;
   }
 
   private async getHeaders(): Promise<HeadersInit> {
@@ -76,6 +98,24 @@ class MemoryClient {
   }
 
   async createMemory(data: CreateMemoryRequest): Promise<Memory> {
+    // Try MCP first if available
+    const mcpConnected = await this.ensureMCPConnected();
+    if (mcpConnected && this.mcpClient) {
+      try {
+        const result = await this.mcpClient.callTool({
+          name: 'memory_create_memory',
+          arguments: data
+        });
+        
+        if (result.success && result.data) {
+          return result.data;
+        }
+      } catch (error) {
+        console.warn('MCP call failed, falling back to REST:', error);
+      }
+    }
+    
+    // Fallback to REST API
     const headers = await this.getHeaders();
     const response = await fetch(this.baseUrl, {
       method: 'POST',
@@ -93,6 +133,24 @@ class MemoryClient {
   }
 
   async getMemory(id: string): Promise<Memory> {
+    // Try MCP first if available
+    const mcpConnected = await this.ensureMCPConnected();
+    if (mcpConnected && this.mcpClient) {
+      try {
+        const result = await this.mcpClient.callTool({
+          name: 'memory_get_memory',
+          arguments: { memory_id: id }
+        });
+        
+        if (result.success && result.data) {
+          return result.data;
+        }
+      } catch (error) {
+        console.warn('MCP call failed, falling back to REST:', error);
+      }
+    }
+    
+    // Fallback to REST API
     const headers = await this.getHeaders();
     const response = await fetch(`${this.baseUrl}/${id}`, { headers });
 
@@ -106,6 +164,24 @@ class MemoryClient {
   }
 
   async updateMemory(id: string, data: Partial<CreateMemoryRequest>): Promise<Memory> {
+    // Try MCP first if available
+    const mcpConnected = await this.ensureMCPConnected();
+    if (mcpConnected && this.mcpClient) {
+      try {
+        const result = await this.mcpClient.callTool({
+          name: 'memory_update_memory',
+          arguments: { memory_id: id, ...data }
+        });
+        
+        if (result.success && result.data) {
+          return result.data;
+        }
+      } catch (error) {
+        console.warn('MCP call failed, falling back to REST:', error);
+      }
+    }
+    
+    // Fallback to REST API
     const headers = await this.getHeaders();
     const response = await fetch(`${this.baseUrl}/${id}`, {
       method: 'PUT',
@@ -123,6 +199,24 @@ class MemoryClient {
   }
 
   async deleteMemory(id: string): Promise<void> {
+    // Try MCP first if available
+    const mcpConnected = await this.ensureMCPConnected();
+    if (mcpConnected && this.mcpClient) {
+      try {
+        const result = await this.mcpClient.callTool({
+          name: 'memory_delete_memory',
+          arguments: { memory_id: id }
+        });
+        
+        if (result.success) {
+          return;
+        }
+      } catch (error) {
+        console.warn('MCP call failed, falling back to REST:', error);
+      }
+    }
+    
+    // Fallback to REST API
     const headers = await this.getHeaders();
     const response = await fetch(`${this.baseUrl}/${id}`, {
       method: 'DELETE',
@@ -143,6 +237,24 @@ class MemoryClient {
     sort?: string;
     order?: 'asc' | 'desc';
   }): Promise<MemoryListResponse> {
+    // Try MCP first if available
+    const mcpConnected = await this.ensureMCPConnected();
+    if (mcpConnected && this.mcpClient) {
+      try {
+        const result = await this.mcpClient.callTool({
+          name: 'memory_list_memories',
+          arguments: params || {}
+        });
+        
+        if (result.success && result.data) {
+          return result.data;
+        }
+      } catch (error) {
+        console.warn('MCP call failed, falling back to REST:', error);
+      }
+    }
+    
+    // Fallback to REST API
     const searchParams = new URLSearchParams();
     
     if (params?.page) searchParams.set('page', params.page.toString());
@@ -164,6 +276,24 @@ class MemoryClient {
   }
 
   async searchMemories(data: SearchMemoryRequest): Promise<SearchMemoryResponse> {
+    // Try MCP first if available
+    const mcpConnected = await this.ensureMCPConnected();
+    if (mcpConnected && this.mcpClient) {
+      try {
+        const result = await this.mcpClient.callTool({
+          name: 'memory_search_memories',
+          arguments: data
+        });
+        
+        if (result.success && result.data) {
+          return result.data;
+        }
+      } catch (error) {
+        console.warn('MCP call failed, falling back to REST:', error);
+      }
+    }
+    
+    // Fallback to REST API
     const headers = await this.getHeaders();
     const response = await fetch(`${this.baseUrl}/search`, {
       method: 'POST',
@@ -219,6 +349,50 @@ class MemoryClient {
     }
 
     return response.blob();
+  }
+
+  // MCP-specific methods
+  async getMCPTools() {
+    if (!this.mcpClient) {
+      throw new Error('MCP client not initialized');
+    }
+    
+    const connected = await this.ensureMCPConnected();
+    if (!connected) {
+      throw new Error('Failed to connect to MCP server');
+    }
+    
+    return await this.mcpClient.listTools();
+  }
+
+  getMCPConnectionStatus() {
+    if (!this.mcpClient) {
+      return { connected: false, mode: 'disabled' as const };
+    }
+    
+    return {
+      connected: this.mcpClient.isConnectedToServer(),
+      mode: this.mcpClient.getConnectionMode()
+    };
+  }
+
+  onMCPUpdate(callback: (data: any) => void): () => void {
+    if (!this.mcpClient) {
+      return () => {}; // No-op unsubscribe
+    }
+    
+    return this.mcpClient.onUpdate(callback);
+  }
+
+  setUseMCP(enabled: boolean) {
+    this.useMCP = enabled;
+    
+    if (enabled && !this.mcpClient) {
+      this.mcpClient = getMCPClient({
+        mode: 'auto',
+        apiKey: this.apiKey || undefined
+      });
+    }
   }
 }
 

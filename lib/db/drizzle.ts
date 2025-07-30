@@ -20,7 +20,18 @@ try {
   } else {
     // Create a mock db for build time
     db = {
-      select: () => ({ from: () => ({ where: () => Promise.resolve([]) }) }),
+      select: () => ({ 
+        from: () => ({ 
+          where: () => Promise.resolve([]),
+          leftJoin: () => ({
+            leftJoin: () => ({
+              where: () => ({
+                limit: () => Promise.resolve([])
+              })
+            })
+          })
+        }) 
+      }),
       insert: () => ({ values: () => Promise.resolve({ insertId: 'mock' }) }),
       update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
       delete: () => ({ where: () => Promise.resolve() })
@@ -29,7 +40,18 @@ try {
 } catch (_error) {
   console.warn('Database connection failed, using mock database');
   db = {
-    select: () => ({ from: () => ({ where: () => Promise.resolve([]) }) }),
+    select: () => ({ 
+      from: () => ({ 
+        where: () => Promise.resolve([]),
+        leftJoin: () => ({
+          leftJoin: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([])
+            })
+          })
+        })
+      }) 
+    }),
     insert: () => ({ values: () => Promise.resolve({ insertId: 'mock' }) }),
     update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
     delete: () => ({ where: () => Promise.resolve() })

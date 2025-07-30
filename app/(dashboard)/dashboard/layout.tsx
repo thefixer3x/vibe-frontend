@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Users, Settings, Shield, Activity, Menu, Database, Brain } from 'lucide-react';
+import { Users, Settings, Shield, Activity, Menu, Database, Brain, Zap } from 'lucide-react';
 
 export default function DashboardLayout({
   children
@@ -18,6 +18,7 @@ export default function DashboardLayout({
     { href: '/dashboard', icon: Users, label: 'Team' },
     { href: '/dashboard/apis', icon: Database, label: 'API Warehouse' },
     { href: '/dashboard/memory', icon: Brain, label: 'Memory' },
+    { href: '/dashboard/mcp-test', icon: Zap, label: 'MCP Test' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },
     { href: '/dashboard/activity', icon: Activity, label: 'Activity' },
     { href: '/dashboard/security', icon: Shield, label: 'Security' }

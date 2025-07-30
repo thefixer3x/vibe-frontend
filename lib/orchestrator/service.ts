@@ -1,4 +1,5 @@
 import { memoryClient } from '@/lib/memory/client';
+import { getMCPClient } from '@/lib/mcp/client';
 
 export interface ServiceStatus {
   name: string;
@@ -6,6 +7,7 @@ export interface ServiceStatus {
   url?: string;
   lastCheck: Date;
   error?: string;
+  mode?: 'mcp-local' | 'mcp-remote' | 'rest-api';
 }
 
 export interface OrchestratorCommand {
@@ -22,13 +24,35 @@ export interface OrchestratorResult {
   error?: string;
   executionTime: number;
   command: OrchestratorCommand;
+  mcpMode?: 'local' | 'remote' | 'disabled';
 }
 
 class OrchestratorService {
   private services: Map<string, ServiceStatus> = new Map();
+  private mcpClient = getMCPClient();
 
   constructor() {
     this.initializeServices();
+    this.initializeMCP();
+  }
+
+  private async initializeMCP() {
+    try {
+      const connected = await this.mcpClient.connect();
+      if (connected) {
+        console.log('Orchestrator: MCP connected, mode:', this.mcpClient.getConnectionMode());
+        
+        // Update memory service status based on MCP connection
+        const memoryService = this.services.get('memory');
+        if (memoryService) {
+          memoryService.mode = this.mcpClient.getConnectionMode() === 'local' ? 'mcp-local' : 'mcp-remote';
+          memoryService.status = 'connected';
+          this.services.set('memory', memoryService);
+        }
+      }
+    } catch (error) {
+      console.warn('Orchestrator: MCP connection failed', error);
+    }
   }
 
   private initializeServices() {
@@ -43,13 +67,20 @@ class OrchestratorService {
       name: 'Memory Service',
       status: 'disconnected',
       url: memoryServiceUrl,
-      lastCheck: new Date()
+      lastCheck: new Date(),
+      mode: 'rest-api'
     });
 
     this.services.set('frontend', {
       name: 'Frontend Application',
       status: 'connected',
       url: frontendUrl,
+      lastCheck: new Date()
+    });
+
+    this.services.set('mcp', {
+      name: 'MCP Protocol',
+      status: 'disconnected',
       lastCheck: new Date()
     });
   }
@@ -62,23 +93,40 @@ class OrchestratorService {
 
     try {
       if (serviceName === 'memory') {
-        // Try to list memories to check if memory service is responsive
-        // Use a timeout to prevent hanging
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Service timeout')), 5000)
-        );
+        // Check memory service health
+        const mcpStatus = memoryClient.getMCPConnectionStatus();
         
-        await Promise.race([
-          memoryClient.listMemories({ limit: 1 }),
-          timeoutPromise
-        ]);
-        
-        service.status = 'connected';
-        service.error = undefined;
+        if (mcpStatus.connected) {
+          service.status = 'connected';
+          service.mode = mcpStatus.mode === 'local' ? 'mcp-local' : 'mcp-remote';
+          service.error = undefined;
+        } else {
+          // Try to list memories to check if REST API is responsive
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Service timeout')), 5000)
+          );
+          
+          await Promise.race([
+            memoryClient.listMemories({ limit: 1 }),
+            timeoutPromise
+          ]);
+          
+          service.status = 'connected';
+          service.mode = 'rest-api';
+          service.error = undefined;
+        }
       } else if (serviceName === 'frontend') {
         // Frontend is always connected if we're running this code
         service.status = 'connected';
         service.error = undefined;
+      } else if (serviceName === 'mcp') {
+        // Check MCP connection status
+        const mcpConnected = this.mcpClient.isConnectedToServer();
+        const mcpMode = this.mcpClient.getConnectionMode();
+        
+        service.status = mcpConnected ? 'connected' : 'disconnected';
+        service.mode = mcpMode === 'local' ? 'mcp-local' : mcpMode === 'remote' ? 'mcp-remote' : undefined;
+        service.error = mcpConnected ? undefined : 'MCP not connected';
       }
     } catch (error) {
       service.status = 'error';
@@ -117,6 +165,41 @@ class OrchestratorService {
 
   parseCommand(input: string): OrchestratorCommand {
     const command = input.toLowerCase().trim();
+    
+    // MCP-specific commands
+    if (command.includes('mcp')) {
+      if (command.includes('connect')) {
+        return {
+          action: 'mcp-connect',
+          target: 'mcp',
+          tool: 'orchestrator',
+          parameters: { 
+            mode: command.includes('local') ? 'local' : command.includes('remote') ? 'remote' : 'auto'
+          },
+          confidence: 0.9
+        };
+      }
+      
+      if (command.includes('status') || command.includes('info')) {
+        return {
+          action: 'mcp-status',
+          target: 'mcp',
+          tool: 'orchestrator',
+          parameters: {},
+          confidence: 0.9
+        };
+      }
+      
+      if (command.includes('tools') || command.includes('list')) {
+        return {
+          action: 'mcp-tools',
+          target: 'mcp',
+          tool: 'orchestrator',
+          parameters: {},
+          confidence: 0.9
+        };
+      }
+    }
     
     // Memory service commands
     if (command.includes('search') && (command.includes('memor') || command.includes('find'))) {
@@ -238,19 +321,22 @@ class OrchestratorService {
         success: true,
         data: result,
         executionTime: Date.now() - startTime,
-        command
+        command,
+        mcpMode: this.mcpClient.getConnectionMode()
       };
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         executionTime: Date.now() - startTime,
-        command
+        command,
+        mcpMode: 'disabled'
       };
     }
   }
 
   private async executeMemoryCommand(command: OrchestratorCommand): Promise<Record<string, unknown>> {
+    // Memory commands now use the enhanced memory client with MCP support
     switch (command.action) {
       case 'search':
         const searchResults = await memoryClient.searchMemories({
@@ -258,20 +344,22 @@ class OrchestratorService {
           limit: 10
         });
         return {
-          memories: searchResults.memories,
-          total: searchResults.total
+          memories: searchResults.results,
+          total: searchResults.total,
+          mcpMode: memoryClient.getMCPConnectionStatus().mode
         };
 
       case 'create':
         const newMemory = await memoryClient.createMemory({
           title: command.parameters.title as string,
           content: command.parameters.content as string,
-          type: (command.parameters.type as any) || 'context'
+          memory_type: (command.parameters.type as any) || 'context'
         });
         return {
           id: newMemory.id,
           title: newMemory.title,
-          message: 'Memory created successfully'
+          message: 'Memory created successfully',
+          mcpMode: memoryClient.getMCPConnectionStatus().mode
         };
 
       case 'list':
@@ -279,20 +367,22 @@ class OrchestratorService {
           limit: command.parameters.limit as number || 10
         });
         return {
-          memories: listResults.memories,
-          total: listResults.total
+          memories: listResults.data,
+          total: listResults.total,
+          mcpMode: memoryClient.getMCPConnectionStatus().mode
         };
 
       case 'stats':
         const statsResults = await memoryClient.listMemories({ limit: 1000 });
-        const byType = statsResults.memories.reduce((acc, memory) => {
-          acc[memory.type] = (acc[memory.type] || 0) + 1;
+        const byType = statsResults.data.reduce((acc, memory) => {
+          acc[memory.memory_type] = (acc[memory.memory_type] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
 
         return {
           total_memories: statsResults.total,
-          by_type: byType
+          by_type: byType,
+          mcpMode: memoryClient.getMCPConnectionStatus().mode
         };
 
       default:
@@ -324,8 +414,53 @@ class OrchestratorService {
           summary: {
             total: statuses.length,
             connected: statuses.filter(s => s.status === 'connected').length,
-            errors: statuses.filter(s => s.status === 'error').length
+            errors: statuses.filter(s => s.status === 'error').length,
+            mcpEnabled: statuses.some(s => s.mode?.startsWith('mcp'))
           }
+        };
+
+      case 'mcp-connect':
+        const mode = command.parameters.mode as 'local' | 'remote' | 'auto';
+        const connected = await this.mcpClient.connect();
+        
+        if (connected) {
+          await this.checkServiceHealth('mcp');
+          return {
+            message: `MCP connected in ${this.mcpClient.getConnectionMode()} mode`,
+            mode: this.mcpClient.getConnectionMode(),
+            connected: true
+          };
+        } else {
+          return {
+            message: 'Failed to connect to MCP',
+            connected: false
+          };
+        }
+
+      case 'mcp-status':
+        const mcpStatus = {
+          connected: this.mcpClient.isConnectedToServer(),
+          mode: this.mcpClient.getConnectionMode(),
+          memoryClientStatus: memoryClient.getMCPConnectionStatus()
+        };
+        
+        return {
+          mcp: mcpStatus,
+          message: mcpStatus.connected 
+            ? `MCP is connected in ${mcpStatus.mode} mode`
+            : 'MCP is not connected'
+        };
+
+      case 'mcp-tools':
+        if (!this.mcpClient.isConnectedToServer()) {
+          throw new Error('MCP not connected. Use "connect mcp" first.');
+        }
+        
+        const tools = await this.mcpClient.listTools();
+        return {
+          tools,
+          count: tools.length,
+          message: `Found ${tools.length} MCP tools`
         };
 
       default:
@@ -336,6 +471,18 @@ class OrchestratorService {
   async processNaturalLanguage(input: string): Promise<OrchestratorResult> {
     const command = this.parseCommand(input);
     return await this.executeCommand(command);
+  }
+
+  // MCP-specific methods
+  getMCPStatus() {
+    return {
+      connected: this.mcpClient.isConnectedToServer(),
+      mode: this.mcpClient.getConnectionMode()
+    };
+  }
+
+  async reconnectMCP() {
+    await this.initializeMCP();
   }
 }
 

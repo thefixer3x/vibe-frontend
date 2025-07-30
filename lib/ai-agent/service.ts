@@ -1,4 +1,5 @@
 import { executeToolCall, getToolDefinitions, ToolCall, ToolResult } from './tools';
+import { getMCPClient } from '@/lib/mcp/client';
 
 export interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -14,10 +15,11 @@ export interface AgentResponse {
   toolResults?: ToolResult[];
   reasoning?: string;
   confidence?: number;
+  mcpMode?: 'local' | 'remote' | 'disabled';
 }
 
 class AIAgentService {
-  private systemPrompt = `You are a Memory Assistant AI agent with access to a comprehensive memory management system. You can help users:
+  private systemPrompt = `You are a Memory Assistant AI agent with access to a comprehensive memory management system through MCP (Model Context Protocol). You can help users:
 
 1. **Search and retrieve memories** using semantic search
 2. **Create new memories** with proper categorization
@@ -39,7 +41,82 @@ When users ask questions or make requests:
 3. Provide helpful, contextual responses based on the results
 4. Suggest related actions or memory creation when appropriate
 
+You have access to both MCP tools (when available) and standard tools. MCP provides a more efficient and standardized way to interact with memory services.
+
 Always be helpful, accurate, and provide context for your responses. If you use tools, explain what you're doing and why.`;
+
+  private mcpClient = getMCPClient();
+  private useMCP = true;
+
+  constructor() {
+    // Initialize MCP connection
+    this.initializeMCP();
+  }
+
+  private async initializeMCP() {
+    try {
+      const connected = await this.mcpClient.connect();
+      if (connected) {
+        console.log('AI Agent: MCP connected, mode:', this.mcpClient.getConnectionMode());
+      }
+    } catch (error) {
+      console.warn('AI Agent: MCP connection failed, will use fallback tools', error);
+      this.useMCP = false;
+    }
+  }
+
+  private async callMCPTool(toolName: string, args: any): Promise<ToolResult> {
+    try {
+      const result = await this.mcpClient.callTool({
+        name: toolName,
+        arguments: args
+      });
+
+      if (result.success) {
+        return {
+          success: true,
+          data: result.data
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error || 'MCP tool call failed'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  private async executeMCPOrFallback(toolCall: ToolCall): Promise<ToolResult> {
+    // Map standard tool names to MCP tool names
+    const toolMapping: Record<string, string> = {
+      'search_memories': 'memory_search_memories',
+      'create_memory': 'memory_create_memory',
+      'list_memories': 'memory_list_memories',
+      'get_memory': 'memory_get_memory',
+      'update_memory': 'memory_update_memory',
+      'delete_memory': 'memory_delete_memory'
+    };
+
+    const mcpToolName = toolMapping[toolCall.name];
+    
+    if (this.useMCP && mcpToolName && this.mcpClient.isConnectedToServer()) {
+      // Try MCP first
+      const mcpResult = await this.callMCPTool(mcpToolName, toolCall.arguments);
+      if (mcpResult.success) {
+        return mcpResult;
+      }
+      // Fall through to standard tool if MCP fails
+      console.warn(`MCP tool ${mcpToolName} failed, falling back to standard tool`);
+    }
+
+    // Use standard tool execution
+    return await executeToolCall(toolCall);
+  }
 
   private mockLLMCall = async (messages: Message[]): Promise<{
     content: string;
@@ -82,7 +159,7 @@ Always be helpful, accurate, and provide context for your responses. If you use 
             arguments: {
               title: titleMatch[1],
               content: contentMatch?.[1] || titleMatch[1],
-              type: 'context'
+              memory_type: 'context'
             }
           }]
         };
@@ -99,213 +176,149 @@ Always be helpful, accurate, and provide context for your responses. If you use 
       };
     }
 
-    if (query.includes('stats') || query.includes('statistics') || query.includes('analyze')) {
+    if (query.includes('stats') || query.includes('statistic')) {
       return {
-        content: "I'll analyze your memory statistics.",
+        content: "I'll get your memory statistics.",
         tool_calls: [{
-          name: 'analyze_memory_stats',
+          name: 'get_stats',
           arguments: {}
         }]
       };
     }
 
-    if (query.includes('health') || query.includes('status') || query.includes('service')) {
+    if (query.includes('health') || query.includes('status')) {
       return {
-        content: "I'll check the health status of all services.",
+        content: "I'll check the system health status.",
         tool_calls: [{
-          name: 'check_service_health',
+          name: 'check_health',
           arguments: {}
         }]
       };
     }
 
-    if (query.includes('open') || query.includes('navigate') || query.includes('go to')) {
-      if (query.includes('visualiz')) {
-        return {
-          content: "I'll navigate to the memory visualizer.",
-          tool_calls: [{
-            name: 'navigate_to_page',
-            arguments: { page: 'memory-visualizer' }
-          }]
-        };
+    if (query.includes('mcp') && (query.includes('status') || query.includes('connection'))) {
+      const mcpStatus = this.mcpClient.getConnectionMode();
+      return {
+        content: `MCP is currently ${mcpStatus === 'disconnected' ? 'disconnected' : `connected in ${mcpStatus} mode`}.`
+      };
+    }
+
+    if (query.includes('tools') || query.includes('capabilities')) {
+      if (this.useMCP && this.mcpClient.isConnectedToServer()) {
+        try {
+          const mcpTools = await this.mcpClient.listTools();
+          return {
+            content: `I have access to ${mcpTools.length} MCP tools for memory management:\n${mcpTools.map(t => `- ${t.name}: ${t.description}`).join('\n')}`
+          };
+        } catch (error) {
+          // Fall through to standard tools
+        }
       }
-      if (query.includes('upload')) {
-        return {
-          content: "I'll navigate to the memory upload page.",
-          tool_calls: [{
-            name: 'navigate_to_page',
-            arguments: { page: 'memory-upload' }
-          }]
-        };
-      }
-      if (query.includes('dashboard')) {
-        return {
-          content: "I'll navigate to the dashboard.",
-          tool_calls: [{
-            name: 'navigate_to_page',
-            arguments: { page: 'dashboard' }
-          }]
-        };
-      }
+      
+      const tools = getToolDefinitions();
+      return {
+        content: `I have access to ${tools.length} tools:\n${tools.map(t => `- ${t.name}: ${t.description}`).join('\n')}`
+      };
+    }
+
+    if (query.includes('dashboard') || query.includes('navigate')) {
+      const target = query.includes('memory') ? 'memory-dashboard' : 'dashboard';
+      return {
+        content: `I'll navigate you to the ${target}.`,
+        tool_calls: [{
+          name: 'navigate',
+          arguments: { target }
+        }]
+      };
     }
 
     // Default response
     return {
-      content: `I understand you're asking about "${query}". I can help you with:
-      
-• **Searching memories**: "search for API documentation"
-• **Creating memories**: "create memory 'Meeting Notes' with content about today's discussion"
-• **Listing memories**: "list my memories" or "show all project memories"
-• **Memory statistics**: "analyze my memory stats"
-• **Service health**: "check service status"
-• **Navigation**: "open memory visualizer" or "go to upload page"
-
-What would you like me to help you with?`
+      content: `I understand you're asking about: "${lastUserMessage.content}". I can help you search memories, create new ones, view statistics, or navigate the application. What would you like to do?`
     };
-  };
+  }
 
-  async processMessage(userMessage: string, conversationHistory: Message[] = []): Promise<AgentResponse> {
-    try {
-      // Build conversation context
-      const messages: Message[] = [
+  async processMessage(
+    userMessage: string,
+    conversationHistory: Message[] = []
+  ): Promise<AgentResponse> {
+    // Add system prompt if not present
+    if (conversationHistory.length === 0 || conversationHistory[0].role !== 'system') {
+      conversationHistory = [
         { role: 'system', content: this.systemPrompt },
-        ...conversationHistory,
-        { role: 'user', content: userMessage }
+        ...conversationHistory
       ];
+    }
 
-      // Get initial response from LLM
-      const llmResponse = await this.mockLLMCall(messages);
+    // Add user message
+    conversationHistory.push({ role: 'user', content: userMessage });
+
+    try {
+      // Get LLM response
+      const llmResponse = await this.mockLLMCall(conversationHistory);
       
-      let toolResults: ToolResult[] = [];
-      let finalMessage = llmResponse.content;
-
       // Execute tool calls if any
+      let toolResults: ToolResult[] = [];
       if (llmResponse.tool_calls && llmResponse.tool_calls.length > 0) {
-        toolResults = await Promise.all(
-          llmResponse.tool_calls.map(toolCall => executeToolCall(toolCall))
-        );
-
-        // Process tool results and generate final response
-        finalMessage = this.formatResponseWithToolResults(
-          llmResponse.content,
-          llmResponse.tool_calls,
-          toolResults
-        );
+        for (const toolCall of llmResponse.tool_calls) {
+          const result = await this.executeMCPOrFallback(toolCall);
+          toolResults.push(result);
+        }
       }
 
       return {
-        message: finalMessage,
+        message: llmResponse.content,
         toolCalls: llmResponse.tool_calls,
         toolResults,
         confidence: 0.8,
-        reasoning: llmResponse.tool_calls ? 
-          `Executed ${llmResponse.tool_calls.length} tool(s) to fulfill the request.` : 
-          'Provided direct response based on query analysis.'
+        mcpMode: this.mcpClient.getConnectionMode()
       };
     } catch (error) {
       return {
-        message: `I encountered an error while processing your request: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
-        confidence: 0.0
+        message: `I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        confidence: 0.1,
+        mcpMode: 'disabled'
       };
     }
   }
 
-  private formatResponseWithToolResults(
-    initialMessage: string,
-    toolCalls: ToolCall[],
-    toolResults: ToolResult[]
-  ): string {
-    let response = initialMessage + "\n\n";
-
-    toolCalls.forEach((toolCall, index) => {
-      const result = toolResults[index];
-      
-      if (!result.success) {
-        response += `❌ **${toolCall.name}** failed: ${result.error}\n\n`;
-        return;
+  async getAvailableTools() {
+    const tools = [];
+    
+    // Get MCP tools if available
+    if (this.useMCP && this.mcpClient.isConnectedToServer()) {
+      try {
+        const mcpTools = await this.mcpClient.listTools();
+        tools.push(...mcpTools.map(t => ({
+          ...t,
+          source: 'mcp' as const
+        })));
+      } catch (error) {
+        console.warn('Failed to get MCP tools:', error);
       }
-
-      switch (toolCall.name) {
-        case 'search_memories':
-          const searchData = result.data as any;
-          if (searchData.memories?.length > 0) {
-            response += `🔍 **Found ${searchData.memories.length} memories:**\n`;
-            searchData.memories.slice(0, 5).forEach((memory: any, i: number) => {
-              response += `${i + 1}. **${memory.title}** (${memory.type})\n   ${memory.content.substring(0, 100)}...\n`;
-            });
-            if (searchData.memories.length > 5) {
-              response += `   ... and ${searchData.memories.length - 5} more results\n`;
-            }
-          } else {
-            response += "🔍 No memories found matching your search.\n";
-          }
-          break;
-
-        case 'create_memory':
-          const createData = result.data as any;
-          response += `✅ **Memory created successfully!**\n   Title: "${createData.title}"\n   Type: ${createData.type}\n   ID: ${createData.id}\n`;
-          break;
-
-        case 'list_memories':
-          const listData = result.data as any;
-          response += `📋 **Memory List** (${listData.memories.length} of ${listData.total}):\n`;
-          listData.memories.slice(0, 10).forEach((memory: any, i: number) => {
-            response += `${i + 1}. **${memory.title}** (${memory.type})\n`;
-          });
-          if (listData.memories.length > 10) {
-            response += `   ... and ${listData.memories.length - 10} more\n`;
-          }
-          break;
-
-        case 'analyze_memory_stats':
-          const statsData = result.data as any;
-          response += `📊 **Memory Analysis:**\n`;
-          response += `• Total memories: ${statsData.total}\n`;
-          response += `• Memory types: ${Object.entries(statsData.byType).map(([type, count]) => `${type}(${count})`).join(', ')}\n`;
-          response += `• Average content length: ${statsData.statistics.averageContentLength} characters\n`;
-          response += `• Total unique tags: ${statsData.statistics.totalTags}\n`;
-          if (statsData.topTags.length > 0) {
-            response += `• Top tags: ${statsData.topTags.slice(0, 5).map(([tag, count]: any) => `${tag}(${count})`).join(', ')}\n`;
-          }
-          break;
-
-        case 'check_service_health':
-          const healthData = result.data as any;
-          response += `🏥 **Service Health Check:**\n`;
-          response += `• Total services: ${healthData.summary.total}\n`;
-          response += `• Connected: ${healthData.summary.connected}\n`;
-          response += `• Errors: ${healthData.summary.errors}\n\n`;
-          healthData.services.forEach((service: any) => {
-            const emoji = service.status === 'connected' ? '🟢' : service.status === 'error' ? '🔴' : '🟡';
-            response += `${emoji} **${service.name}**: ${service.status}\n`;
-            if (service.error) {
-              response += `   Error: ${service.error}\n`;
-            }
-          });
-          break;
-
-        case 'navigate_to_page':
-          const navData = result.data as any;
-          response += `🧭 **Navigation**: ${navData.message}\n   URL: ${navData.url}\n`;
-          break;
-
-        default:
-          response += `✅ **${toolCall.name}** completed successfully.\n`;
-          if (result.data) {
-            response += `   Result: ${JSON.stringify(result.data, null, 2)}\n`;
-          }
-      }
-
-      response += "\n";
-    });
-
-    return response.trim();
+    }
+    
+    // Always include standard tools as fallback
+    const standardTools = getToolDefinitions();
+    tools.push(...standardTools.map(t => ({
+      ...t,
+      source: 'standard' as const
+    })));
+    
+    return tools;
   }
 
-  getAvailableTools() {
-    return getToolDefinitions();
+  getMCPStatus() {
+    return {
+      connected: this.mcpClient.isConnectedToServer(),
+      mode: this.mcpClient.getConnectionMode(),
+      enabled: this.useMCP
+    };
+  }
+
+  async reconnectMCP() {
+    this.useMCP = true;
+    await this.initializeMCP();
   }
 }
 
