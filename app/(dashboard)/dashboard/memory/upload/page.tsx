@@ -114,7 +114,7 @@ export default function MemoryUploadPage() {
                     <p className="text-2xl font-bold">
                       {uploadedMemories.reduce((acc, m) => {
                         const types = new Set(acc);
-                        types.add(m.type);
+                        types.add(m.memory_type);
                         return Array.from(types);
                       }, [] as string[]).length}
                     </p>

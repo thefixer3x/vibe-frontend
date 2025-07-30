@@ -24,24 +24,24 @@ export default function MemoryVisualizerPage() {
     setIsLoading(true);
     try {
       const response = await memoryClient.listMemories({ limit: 1000 });
-      setMemories(response.memories);
+      setMemories(response.data);
       
       // Calculate stats
-      const byType = response.memories.reduce((acc, memory) => {
-        acc[memory.type] = (acc[memory.type] || 0) + 1;
+      const byType = response.data.reduce((acc, memory) => {
+        acc[memory.memory_type] = (acc[memory.memory_type] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
       
       // Calculate potential connections
       let connections = 0;
-      for (let i = 0; i < response.memories.length; i++) {
-        for (let j = i + 1; j < response.memories.length; j++) {
-          const memA = response.memories[i];
-          const memB = response.memories[j];
+      for (let i = 0; i < response.data.length; i++) {
+        for (let j = i + 1; j < response.data.length; j++) {
+          const memA = response.data[i];
+          const memB = response.data[j];
           
           // Same logic as visualizer for calculating connections
           let weight = 0;
-          if (memA.type === memB.type) weight += 0.3;
+          if (memA.memory_type === memB.memory_type) weight += 0.3;
           
           const tagsA = memA.tags || [];
           const tagsB = memB.tags || [];
@@ -66,7 +66,7 @@ export default function MemoryVisualizerPage() {
 
   const getFilteredMemories = () => {
     if (filterType === 'all') return memories;
-    return memories.filter(memory => memory.type === filterType);
+    return memories.filter(memory => memory.memory_type === filterType);
   };
 
   useEffect(() => {

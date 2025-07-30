@@ -12,6 +12,8 @@ interface MemoryCardProps {
   onEdit?: (memory: Memory) => void;
   onDelete?: (memory: Memory) => void;
   showActions?: boolean;
+  isSelected?: boolean;
+  onSelectionChange?: (memoryId: string, selected: boolean) => void;
 }
 
 const typeColors = {
@@ -23,16 +25,35 @@ const typeColors = {
   workflow: 'bg-indigo-100 text-indigo-800'
 };
 
-export function MemoryCard({ memory, onEdit, onDelete, showActions = true }: MemoryCardProps) {
+export function MemoryCard({ 
+  memory, 
+  onEdit, 
+  onDelete, 
+  showActions = true,
+  isSelected = false,
+  onSelectionChange
+}: MemoryCardProps) {
+  const memoryType = memory.memory_type;
+  
   return (
-    <Card className="h-full flex flex-col">
+    <Card className={`h-full flex flex-col transition-all ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-lg leading-tight line-clamp-2">
-            {memory.title}
-          </h3>
-          <Badge className={`${typeColors[memory.type]} shrink-0`}>
-            {memory.type}
+          {onSelectionChange && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => onSelectionChange(memory.id, e.target.checked)}
+              className="rounded mt-1"
+            />
+          )}
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg leading-tight line-clamp-2">
+              {memory.title}
+            </h3>
+          </div>
+          <Badge className={`${typeColors[memoryType]} shrink-0`}>
+            {memoryType}
           </Badge>
         </div>
       </CardHeader>
@@ -52,9 +73,16 @@ export function MemoryCard({ memory, onEdit, onDelete, showActions = true }: Mem
           </div>
         )}
         
-        <div className="flex items-center text-xs text-gray-500">
-          <Clock className="w-3 h-3 mr-1" />
-          {formatDistanceToNow(new Date(memory.updatedAt), { addSuffix: true })}
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center">
+            <Clock className="w-3 h-3 mr-1" />
+            {formatDistanceToNow(new Date(memory.updated_at), { addSuffix: true })}
+          </div>
+          {memory.access_count && (
+            <span className="text-xs text-gray-400">
+              {memory.access_count} views
+            </span>
+          )}
         </div>
       </CardContent>
       

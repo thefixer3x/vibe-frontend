@@ -6,7 +6,6 @@ import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Upload, File, X, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { Memory, CreateMemoryRequest } from '@/lib/memory/client';
@@ -21,7 +20,7 @@ interface FileUpload {
   extractedMetadata?: {
     title: string;
     tags: string[];
-    type: Memory['type'];
+    memory_type: Memory['memory_type'];
   };
 }
 
@@ -42,7 +41,7 @@ const memoryTypes = [
 
 export function MemoryUploader({ onMemoryCreated, onBulkUpload, className = '' }: MemoryUploaderProps) {
   const [uploads, setUploads] = useState<FileUpload[]>([]);
-  const [defaultType, setDefaultType] = useState<Memory['type']>('context');
+  const [defaultType, setDefaultType] = useState<Memory['memory_type']>('context');
   const [defaultTags, setDefaultTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -142,16 +141,16 @@ export function MemoryUploader({ onMemoryCreated, onBulkUpload, className = '' }
     if (contentLower.includes('bug') || contentLower.includes('issue')) tags.push('issues');
     
     // Determine type based on content and filename
-    let type: Memory['type'] = defaultType;
-    if (filename.includes('project') || contentLower.includes('project')) type = 'project';
-    else if (filename.includes('doc') || contentLower.includes('documentation')) type = 'knowledge';
-    else if (filename.includes('ref') || contentLower.includes('reference')) type = 'reference';
-    else if (filename.includes('workflow') || contentLower.includes('process')) type = 'workflow';
+    let memoryType: Memory['memory_type'] = defaultType;
+    if (filename.includes('project') || contentLower.includes('project')) memoryType = 'project';
+    else if (filename.includes('doc') || contentLower.includes('documentation')) memoryType = 'knowledge';
+    else if (filename.includes('ref') || contentLower.includes('reference')) memoryType = 'reference';
+    else if (filename.includes('workflow') || contentLower.includes('process')) memoryType = 'workflow';
 
     return {
       title: baseName,
       tags: [...new Set([...tags, ...defaultTags])],
-      type
+      memory_type: memoryType
     };
   };
 
@@ -170,14 +169,6 @@ export function MemoryUploader({ onMemoryCreated, onBulkUpload, className = '' }
     setUploads(prev => prev.filter(u => u.id !== id));
   };
 
-  const updateUploadMetadata = (id: string, metadata: Partial<FileUpload['extractedMetadata']>) => {
-    setUploads(prev => prev.map(u => 
-      u.id === id ? { 
-        ...u, 
-        extractedMetadata: { ...u.extractedMetadata!, ...metadata }
-      } : u
-    ));
-  };
 
   const createMemoriesFromUploads = async () => {
     if (uploads.length === 0) return;
@@ -190,7 +181,7 @@ export function MemoryUploader({ onMemoryCreated, onBulkUpload, className = '' }
         const memoryData: CreateMemoryRequest = {
           title: upload.extractedMetadata?.title || upload.file.name,
           content: upload.content,
-          type: upload.extractedMetadata?.type || defaultType,
+          memory_type: upload.extractedMetadata?.memory_type || defaultType,
           tags: upload.extractedMetadata?.tags || defaultTags,
           metadata: {
             filename: upload.file.name,
@@ -248,7 +239,7 @@ export function MemoryUploader({ onMemoryCreated, onBulkUpload, className = '' }
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Default Type</Label>
-              <Select value={defaultType} onValueChange={(value) => setDefaultType(value as Memory['type'])}>
+              <Select value={defaultType} onValueChange={(value) => setDefaultType(value as Memory['memory_type'])}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -337,7 +328,7 @@ export function MemoryUploader({ onMemoryCreated, onBulkUpload, className = '' }
                       </div>
                       {upload.extractedMetadata && (
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline">{upload.extractedMetadata.type}</Badge>
+                          <Badge variant="outline">{upload.extractedMetadata.memory_type}</Badge>
                           {upload.extractedMetadata.tags.map(tag => (
                             <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
                           ))}

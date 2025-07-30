@@ -6,7 +6,7 @@ const MEMORY_SERVICE_SECRET = process.env.MEMORY_SERVICE_SECRET;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getUser();
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     const response = await fetch(`${MEMORY_SERVICE_URL}/api/v1/memory/${id}`, {
       method: 'GET',
@@ -40,7 +40,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getUser();
@@ -48,7 +48,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     
     const response = await fetch(`${MEMORY_SERVICE_URL}/api/v1/memory/${id}`, {
@@ -76,7 +76,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getUser();
@@ -84,7 +84,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     const response = await fetch(`${MEMORY_SERVICE_URL}/api/v1/memory/${id}`, {
       method: 'DELETE',

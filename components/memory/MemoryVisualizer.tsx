@@ -10,7 +10,7 @@ import { Network, Eye, EyeOff, RefreshCw, ZoomIn, ZoomOut } from 'lucide-react';
 interface MemoryNode {
   id: string;
   label: string;
-  type: Memory['type'];
+  type: Memory['memory_type'];
   size: number;
   color: string;
   title: string;
@@ -38,10 +38,10 @@ const typeColors = {
   workflow: '#6366F1'    // indigo
 };
 
-export function MemoryVisualizer({ memories, onNodeClick, className = '' }: MemoryVisualizerProps) {
+export function MemoryVisualizer({ memories, className = '' }: MemoryVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [selectedNode] = useState<string | null>(null);
   const [showLabels, setShowLabels] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
@@ -53,10 +53,10 @@ export function MemoryVisualizer({ memories, onNodeClick, className = '' }: Memo
     const nodes: MemoryNode[] = memories.map(memory => ({
       id: memory.id,
       label: memory.title,
-      type: memory.type,
+      type: memory.memory_type,
       size: Math.max(20, Math.min(50, memory.content.length / 20)),
-      color: typeColors[memory.type],
-      title: `${memory.title}\nType: ${memory.type}\nTags: ${memory.tags?.join(', ') || 'None'}`
+      color: typeColors[memory.memory_type as keyof typeof typeColors],
+      title: `${memory.title}\nType: ${memory.memory_type}\nTags: ${memory.tags?.join(', ') || 'None'}`
     }));
 
     const edges: MemoryEdge[] = [];
@@ -70,7 +70,7 @@ export function MemoryVisualizer({ memories, onNodeClick, className = '' }: Memo
         let weight = 0;
         
         // Same type connection
-        if (memA.type === memB.type) {
+        if (memA.memory_type === memB.memory_type) {
           weight += 0.3;
         }
         
@@ -230,7 +230,7 @@ export function MemoryVisualizer({ memories, onNodeClick, className = '' }: Memo
       canvas.height = container.clientHeight;
       drawNetwork();
     }
-  }, [memories, selectedNode, showLabels, zoomLevel, offset]);
+  }, [memories, selectedNode, showLabels, zoomLevel, offset, drawNetwork]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -246,7 +246,7 @@ export function MemoryVisualizer({ memories, onNodeClick, className = '' }: Memo
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [drawNetwork]);
 
   return (
     <Card className={className}>

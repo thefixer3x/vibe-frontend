@@ -61,7 +61,7 @@ const memoryTools: Tool[] = [
       try {
         const result = await memoryClient.searchMemories({
           query: args.query as string,
-          type: args.type as any,
+          memory_type: args.memory_type as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow' | undefined,
           tags: args.tags ? (args.tags as string).split(',').map(t => t.trim()) : undefined,
           limit: (args.limit as number) || 10
         });

@@ -10,6 +10,8 @@ interface MemoryListProps {
   onEdit?: (memory: Memory) => void;
   onDelete?: (memory: Memory) => void;
   showActions?: boolean;
+  selectedMemories?: string[];
+  onSelectionChange?: (selected: string[]) => void;
   pagination?: {
     page: number;
     total: number;
@@ -23,10 +25,31 @@ export function MemoryList({
   memories, 
   onEdit, 
   onDelete, 
-  showActions = true, 
+  showActions = true,
+  selectedMemories = [],
+  onSelectionChange,
   pagination,
   isLoading 
 }: MemoryListProps) {
+  const handleSelectMemory = (memoryId: string, selected: boolean) => {
+    if (!onSelectionChange) return;
+    
+    if (selected) {
+      onSelectionChange([...selectedMemories, memoryId]);
+    } else {
+      onSelectionChange(selectedMemories.filter(id => id !== memoryId));
+    }
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (!onSelectionChange) return;
+    
+    if (selected) {
+      onSelectionChange(memories.map(m => m.id));
+    } else {
+      onSelectionChange([]);
+    }
+  };
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -54,6 +77,22 @@ export function MemoryList({
 
   return (
     <div className="space-y-6">
+      {onSelectionChange && memories.length > 0 && (
+        <div className="flex items-center gap-2 pb-4 border-b">
+          <input
+            type="checkbox"
+            checked={selectedMemories.length === memories.length && memories.length > 0}
+            onChange={(e) => handleSelectAll(e.target.checked)}
+            className="rounded"
+          />
+          <span className="text-sm text-gray-600">
+            {selectedMemories.length > 0 
+              ? `${selectedMemories.length} selected` 
+              : 'Select all'}
+          </span>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {memories.map((memory) => (
           <MemoryCard
@@ -62,6 +101,8 @@ export function MemoryList({
             onEdit={onEdit}
             onDelete={onDelete}
             showActions={showActions}
+            isSelected={selectedMemories.includes(memory.id)}
+            onSelectionChange={onSelectionChange ? handleSelectMemory : undefined}
           />
         ))}
       </div>

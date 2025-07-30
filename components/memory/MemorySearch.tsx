@@ -11,7 +11,7 @@ import { Memory } from '@/lib/memory/client';
 interface MemorySearchProps {
   onSearch: (params: {
     query: string;
-    type?: Memory['type'];
+    type?: Memory['memory_type'];
     tags?: string[];
     limit?: number;
   }) => void;
@@ -50,7 +50,7 @@ export function MemorySearch({ onSearch, isLoading }: MemorySearchProps) {
     
     onSearch({
       query: query.trim(),
-      type: type === 'all' ? undefined : type as Memory['type'],
+      type: type === 'all' ? undefined : type as Memory['memory_type'],
       tags: tags.length > 0 ? tags : undefined,
       limit: 20
     });

@@ -29,7 +29,9 @@ const memoryTypes = [
 export function MemoryForm({ memory, onSubmit, onCancel, isLoading }: MemoryFormProps) {
   const [title, setTitle] = useState(memory?.title || '');
   const [content, setContent] = useState(memory?.content || '');
-  const [type, setType] = useState<CreateMemoryRequest['type']>(memory?.type || 'context');
+  const [type, setType] = useState<CreateMemoryRequest['memory_type']>(
+    memory?.memory_type || 'context'
+  );
   const [tags, setTags] = useState<string[]>(memory?.tags || []);
   const [newTag, setNewTag] = useState('');
 
@@ -50,7 +52,7 @@ export function MemoryForm({ memory, onSubmit, onCancel, isLoading }: MemoryForm
     const data: CreateMemoryRequest = {
       title: title.trim(),
       content: content.trim(),
-      type,
+      memory_type: type,
       tags: tags.length > 0 ? tags : undefined,
     };
 
@@ -72,7 +74,7 @@ export function MemoryForm({ memory, onSubmit, onCancel, isLoading }: MemoryForm
 
       <div>
         <Label htmlFor="type">Type</Label>
-        <Select value={type} onValueChange={(value) => setType(value as CreateMemoryRequest['type'])}>
+        <Select value={type} onValueChange={(value) => setType(value as CreateMemoryRequest['memory_type'])}>
           <SelectTrigger>
             <SelectValue placeholder="Select memory type" />
           </SelectTrigger>
