@@ -102,3 +102,70 @@ The orchestrator service automatically detects the environment and:
 - Verify all environment variables are set
 - Check Node.js version compatibility
 - Review build logs for missing dependencies
+
+## Vercel Deployment Configuration (Recommended)
+
+### 1) Create Vercel Project
+- Framework preset: Next.js
+- Build command: `npm run build`
+- Install command: `npm install`
+- Output dir: `.next`
+
+### 2) Environment Variables (Project Settings → Environment Variables)
+
+Required
+```
+AUTH_SECRET=generate_a_strong_secret # openssl rand -base64 32
+POSTGRES_URL=postgresql://<user>:<pass>@<host>:<port>/<db>
+BASE_URL=https://<your-vercel-domain>
+```
+
+Memory Service (external microservice)
+```
+MEMORY_SERVICE_URL=https://<your-memory-service-host>
+MEMORY_SERVICE_SECRET=<shared-secret>
+NEXT_PUBLIC_MEMORY_API_URL=/api/memory
+```
+
+MCP (optional)
+```
+NEXT_PUBLIC_MCP_SERVER_URL=ws://localhost:3002/mcp
+NEXT_PUBLIC_MCP_MODE=auto
+NEXT_PUBLIC_ENABLE_MCP=true
+```
+
+Stripe (optional)
+```
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+```
+
+Apple App Store Connect (optional)
+```
+ENABLE_APPLE_CONNECT=true
+APPLE_ISSUER_ID=...
+APPLE_KEY_ID=...
+# Either paste the raw .p8 key or base64-encode it
+APPLE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----
+# or base64
+# APPLE_PRIVATE_KEY=BASE64_ENCODED_P8
+```
+
+### 3) Security Headers
+This repo sets standard security headers via `next.config.ts` (CSP, HSTS, X-Frame-Options, Referrer-Policy, etc.).
+You can also keep `vercel.json` headers if you prefer platform-level control.
+
+### 4) Database Migrations
+- Provision a managed Postgres (Neon, Supabase, RDS, etc.).
+- Locally (or via CI), run: `npm run db:generate && npm run db:migrate`.
+- For production migration workflows, prefer running drizzle-kit via CI with `POSTGRES_URL` scoped to prod.
+
+### 5) Observability (optional but recommended)
+- Add Sentry/Logflare/Datadog for client/server error reporting.
+- Enable Vercel Analytics.
+
+### 6) Rollout
+- Connect GitHub repo → Vercel.
+- Protect `main` with PR reviews.
+- Use preview deployments to test MCP/Memory integration.

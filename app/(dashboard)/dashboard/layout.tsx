@@ -19,6 +19,7 @@ export default function DashboardLayout({
     { href: '/dashboard/apis', icon: Database, label: 'API Warehouse' },
     { href: '/dashboard/memory', icon: Brain, label: 'Memory' },
     { href: '/dashboard/mcp-test', icon: Zap, label: 'MCP Test' },
+    { href: '/dashboard/appstore', icon: Settings, label: 'App Store' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },
     { href: '/dashboard/activity', icon: Activity, label: 'Activity' },
     { href: '/dashboard/security', icon: Shield, label: 'Security' }
