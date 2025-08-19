@@ -117,7 +117,8 @@ Required
 ```
 AUTH_SECRET=generate_a_strong_secret # openssl rand -base64 32
 POSTGRES_URL=postgresql://<user>:<pass>@<host>:<port>/<db>
-BASE_URL=https://<your-vercel-domain>
+# Set to your custom production domain
+BASE_URL=https://vibe.seyederick.com
 ```
 
 Memory Service (external microservice)
@@ -133,6 +134,7 @@ NEXT_PUBLIC_MCP_SERVER_URL=ws://localhost:3002/mcp
 NEXT_PUBLIC_MCP_MODE=auto
 NEXT_PUBLIC_ENABLE_MCP=true
 ```
+Note: On production (`vibe.seyederick.com`), leave the local MCP server URL unset or disabled. The app will avoid connecting to `ws://localhost` when not configured.
 
 Stripe (optional)
 ```

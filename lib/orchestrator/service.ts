@@ -57,11 +57,12 @@ class OrchestratorService {
 
   private initializeServices() {
     // Initialize known services
-    const isProduction = process.env.NODE_ENV === 'production';
-    const memoryServiceUrl = process.env.MEMORY_SERVICE_URL || 
-      (isProduction ? 'https://your-memory-service.herokuapp.com' : 'http://localhost:3001');
-    const frontendUrl = process.env.BASE_URL || 
-      (isProduction ? 'https://your-vibe-frontend.netlify.app' : 'http://localhost:3000');
+    // Prefer configured public URLs; otherwise show same-origin/proxy paths for display
+    const memoryServiceUrl =
+      process.env.NEXT_PUBLIC_MEMORY_API_URL ||
+      process.env.MEMORY_SERVICE_URL ||
+      '/api/memory';
+    const frontendUrl = process.env.BASE_URL || '';
 
     this.services.set('memory', {
       name: 'Memory Service',

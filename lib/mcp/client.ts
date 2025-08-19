@@ -31,9 +31,21 @@ class MCPClient {
   private onUpdateCallbacks: ((data: any) => void)[] = [];
 
   constructor(config?: Partial<MCPConfig>) {
+    // Decide a safe default for local MCP only when actually on localhost
+    let defaultLocalUrl: string | undefined = undefined;
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) {
+        defaultLocalUrl = 'ws://localhost:3002/mcp';
+      }
+    } else {
+      // Node context (SSR/build): leave undefined to avoid leaking localhost into client bundles
+      defaultLocalUrl = undefined;
+    }
+
     this.config = {
       mode: config?.mode || 'auto',
-      localServerUrl: config?.localServerUrl || process.env.NEXT_PUBLIC_MCP_SERVER_URL || 'ws://localhost:3002/mcp',
+      localServerUrl: config?.localServerUrl || process.env.NEXT_PUBLIC_MCP_SERVER_URL || defaultLocalUrl,
       remoteApiUrl: config?.remoteApiUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://api.lanonasis.com',
       apiKey: config?.apiKey || process.env.NEXT_PUBLIC_MEMORY_API_KEY,
       userId: config?.userId
@@ -42,7 +54,11 @@ class MCPClient {
 
   async connect(): Promise<boolean> {
     try {
-      const shouldUseRemote = this.shouldUseRemoteMode();
+      let shouldUseRemote = this.shouldUseRemoteMode();
+      // If no local server URL is available, prefer remote (or no-connection) to avoid localhost attempts in prod
+      if (!this.config.localServerUrl) {
+        shouldUseRemote = true;
+      }
       
       if (shouldUseRemote) {
         return await this.connectRemote();
@@ -70,9 +86,10 @@ class MCPClient {
 
   private async connectLocal(): Promise<boolean> {
     try {
-      const transport = new WebSocketClientTransport(
-        new URL(this.config.localServerUrl!)
-      );
+      if (!this.config.localServerUrl) {
+        throw new Error('Local MCP URL not configured');
+      }
+      const transport = new WebSocketClientTransport(new URL(this.config.localServerUrl));
       
       this.client = new Client({
         name: 'vibe-frontend',
@@ -86,7 +103,8 @@ class MCPClient {
       console.log('Connected to local MCP server');
       return true;
     } catch (error) {
-      console.error('Failed to connect to local MCP server:', error);
+      // Avoid noisy errors on production domains where no local server exists
+      console.warn('Failed to connect to local MCP server:', error);
       this.isConnected = false;
       return false;
     }
@@ -105,7 +123,7 @@ class MCPClient {
       return true;
     }
     
-    console.error('API key required for remote MCP mode');
+    console.info('MCP remote mode not configured (missing API key)');
     return false;
   }
 

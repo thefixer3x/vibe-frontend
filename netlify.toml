@@ -1,11 +1,19 @@
 [build]
   publish = ".next"
-  command = "npm run build"
+  command = "bun run build"
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+## Canonical domain redirect: send netlify.app traffic to custom domain
+[[redirects]]
+  from = "/*"
+  to = "https://vibeflows.grizzen.solutions/:splat"
+  status = 301
+  force = true
+  conditions = { Host = ["vibeflows.netlify.app"] }
 
 [[redirects]]
   from = "/*"
@@ -15,6 +23,8 @@
 [build.environment]
   NODE_VERSION = "18"
   NPM_VERSION = "9"
+  # Use Bun on Netlify build image
+  BUN_VERSION = "1.1.21"
 
 # Headers for API routes
 [[headers]]
@@ -32,3 +42,4 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
