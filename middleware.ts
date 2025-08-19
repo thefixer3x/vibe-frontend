@@ -10,23 +10,27 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
   const isProtectedRoute = pathname.startsWith(protectedRoutes);
+  let adminAuthorized = false;
 
   // Single-user mode: allow admin access without sign-in using a one-time access key.
   if (boolFromEnv(env.SINGLE_USER_MODE)) {
     const adminCookie = request.cookies.get('admin');
     const adminKey = env.ADMIN_ACCESS_KEY;
 
-    if (!adminCookie?.value) {
+    // If admin cookie already set, mark as authorized for protected routes
+    if (adminCookie?.value === '1') {
+      adminAuthorized = true;
+    } else {
+      // Allow granting access via URL or header key
       const urlKey = request.nextUrl.searchParams.get('key');
       const headerKey = request.headers.get('x-admin-key');
       if (adminKey && ((urlKey && adminKey === urlKey) || (headerKey && adminKey === headerKey))) {
-        // Set a simple admin cookie and proceed
         const res = NextResponse.next();
         res.cookies.set({ name: 'admin', value: '1', httpOnly: true, sameSite: 'lax', secure: true, path: '/' });
         return res;
       }
       if (isProtectedRoute) {
-        // Redirect to homepage prompting for key usage
+        // Prompt for admin key on protected pages
         const redirectUrl = new URL('/', request.url);
         redirectUrl.searchParams.set('auth', 'required');
         return NextResponse.redirect(redirectUrl);
@@ -55,8 +59,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (isProtectedRoute && !sessionCookie) {
-    return NextResponse.redirect(new URL('/sign-in', request.url));
+  // In single-user mode, allow access with admin cookie even without a user session
+  if (isProtectedRoute) {
+    if (!sessionCookie && !adminAuthorized) {
+      return NextResponse.redirect(new URL('/sign-in', request.url));
+    }
   }
 
   let res = NextResponse.next();

@@ -28,7 +28,8 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   experimental: {
-    // keep experiments off unless needed
+    // Enable Node middleware runtime to improve compatibility on Netlify
+    nodeMiddleware: true,
   },
   trailingSlash: true,
   images: {
