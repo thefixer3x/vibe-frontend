@@ -18,7 +18,8 @@ export async function middleware(request: NextRequest) {
 
     if (!adminCookie?.value) {
       const urlKey = request.nextUrl.searchParams.get('key');
-      if (adminKey && urlKey && adminKey === urlKey) {
+      const headerKey = request.headers.get('x-admin-key');
+      if (adminKey && ((urlKey && adminKey === urlKey) || (headerKey && adminKey === headerKey))) {
         // Set a simple admin cookie and proceed
         const res = NextResponse.next();
         res.cookies.set({ name: 'admin', value: '1', httpOnly: true, sameSite: 'lax', secure: true, path: '/' });
