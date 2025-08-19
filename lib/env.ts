@@ -10,6 +10,10 @@ const EnvSchema = z.object({
   SINGLE_USER_MODE: z.string().optional(),
   ADMIN_ACCESS_KEY: z.string().optional(),
   ADMIN_EMAIL: z.string().email().optional(),
+  // Backup login (optional)
+  BACKUP_LOGIN_ENABLED: z.string().optional(),
+  BACKUP_USER_EMAIL: z.string().email().optional(),
+  BACKUP_USER_PASSWORD_HASH: z.string().optional(),
 
   // Database
   POSTGRES_URL: z.string().url().optional(),

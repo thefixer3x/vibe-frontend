@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Users, Settings, Shield, Activity, Menu, Database, Brain, Zap } from 'lucide-react';
 
@@ -12,7 +12,20 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showAdminBanner, setShowAdminBanner] = useState(false);
+
+  // Show one-time banner after admin key grant
+  React.useEffect(() => {
+    if (searchParams.get('admin_granted') === '1') {
+      setShowAdminBanner(true);
+      // Optionally remove the param from URL without reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('admin_granted');
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  }, [searchParams]);
 
   const navItems = [
     { href: '/dashboard', icon: Users, label: 'Team' },
@@ -27,6 +40,17 @@ export default function DashboardLayout({
 
   return (
     <div className="flex flex-col min-h-[calc(100dvh-68px)] max-w-7xl mx-auto w-full">
+      {showAdminBanner && (
+        <div className="mx-4 my-2 rounded-md border border-green-200 bg-green-50 text-green-900 px-4 py-2 flex items-center justify-between">
+          <span>Admin access granted. You now have dashboard access.</span>
+          <button
+            onClick={() => setShowAdminBanner(false)}
+            className="text-sm underline decoration-green-600 decoration-2"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Mobile header */}
       <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
         <div className="flex items-center">

@@ -25,7 +25,11 @@ export async function middleware(request: NextRequest) {
       const urlKey = request.nextUrl.searchParams.get('key');
       const headerKey = request.headers.get('x-admin-key');
       if (adminKey && ((urlKey && adminKey === urlKey) || (headerKey && adminKey === headerKey))) {
-        const res = NextResponse.next();
+        // Set admin cookie, then redirect to same URL without exposing the key
+        const url = new URL(request.url);
+        url.searchParams.delete('key');
+        url.searchParams.set('admin_granted', '1');
+        const res = NextResponse.redirect(url);
         res.cookies.set({ name: 'admin', value: '1', httpOnly: true, sameSite: 'lax', secure: true, path: '/' });
         return res;
       }

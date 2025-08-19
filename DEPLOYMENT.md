@@ -136,6 +136,15 @@ NEXT_PUBLIC_ENABLE_MCP=true
 ```
 Note: On production (`vibe.seyederick.com`), leave the local MCP server URL unset or disabled. The app will avoid connecting to `ws://localhost` when not configured.
 
+Backup Login (optional)
+```
+BACKUP_LOGIN_ENABLED=true
+BACKUP_USER_EMAIL=info@lanonasis.com
+# Use a bcrypt hash of the password (do not store plaintext)
+BACKUP_USER_PASSWORD_HASH=$2a$10$...
+```
+When enabled, if no user exists in the database and the provided email/password match these values, the app will create an owner account and team on first login. Disable after recovery.
+
 Stripe (optional)
 ```
 STRIPE_SECRET_KEY=sk_live_...

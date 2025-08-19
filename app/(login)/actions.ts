@@ -17,6 +17,7 @@ import {
   invitations
 } from '@/lib/db/schema';
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
+import { env, boolFromEnv } from '@/lib/env';
 // import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createCheckoutSession } from '@/lib/payments/stripe';
@@ -64,6 +65,48 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     .limit(1);
 
   if (userWithTeam.length === 0) {
+    // Fallback: allow env-configured backup login (no pre-seeded DB user)
+    if (
+      boolFromEnv(env.BACKUP_LOGIN_ENABLED) &&
+      env.BACKUP_USER_EMAIL &&
+      env.BACKUP_USER_PASSWORD_HASH &&
+      email.toLowerCase() === env.BACKUP_USER_EMAIL.toLowerCase()
+    ) {
+      const ok = await comparePasswords(password, env.BACKUP_USER_PASSWORD_HASH);
+      if (!ok) {
+        return {
+          error: 'Invalid email or password. Please try again.',
+          email,
+          password
+        };
+      }
+
+      // Create minimal owner account and team on first backup login
+      const passwordHash = env.BACKUP_USER_PASSWORD_HASH;
+      const newUser: NewUser = {
+        email,
+        passwordHash,
+        role: 'owner',
+        name: email.split('@')[0]
+      };
+      const [createdUser] = await db.insert(users).values(newUser).returning();
+      const newTeam: NewTeam = {
+        name: `${createdUser.name || email}'s Workspace`,
+        planName: 'pro',
+        subscriptionStatus: 'active'
+      };
+      const [createdTeam] = await db.insert(teams).values(newTeam).returning();
+      const newTeamMember: NewTeamMember = {
+        userId: createdUser.id,
+        teamId: createdTeam.id,
+        role: 'owner'
+      };
+      await db.insert(teamMembers).values(newTeamMember);
+      await setSession(createdUser);
+      await logActivity(createdTeam.id, createdUser.id, ActivityType.SIGN_IN);
+      return { redirect: '/dashboard' };
+    }
+
     return {
       error: 'Invalid email or password. Please try again.',
       email,
