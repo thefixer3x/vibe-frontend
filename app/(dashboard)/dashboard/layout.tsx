@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Users, Settings, Shield, Activity, Menu, Database, Brain, Zap } from 'lucide-react';
 
@@ -12,20 +12,21 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showAdminBanner, setShowAdminBanner] = useState(false);
 
   // Show one-time banner after admin key grant
   React.useEffect(() => {
-    if (searchParams.get('admin_granted') === '1') {
-      setShowAdminBanner(true);
-      // Optionally remove the param from URL without reload
-      const url = new URL(window.location.href);
-      url.searchParams.delete('admin_granted');
-      window.history.replaceState({}, document.title, url.toString());
-    }
-  }, [searchParams]);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('admin_granted') === '1') {
+        setShowAdminBanner(true);
+        const url = new URL(window.location.href);
+        url.searchParams.delete('admin_granted');
+        window.history.replaceState({}, document.title, url.toString());
+      }
+    } catch {}
+  }, []);
 
   const navItems = [
     { href: '/dashboard', icon: Users, label: 'Team' },

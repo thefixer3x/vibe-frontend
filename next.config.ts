@@ -28,9 +28,6 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig = {
-  // Enable Node middleware runtime only on Netlify builds to silence warnings there.
-  // Vercel doesn't require this and may behave differently, so gate by env.
-  experimental: process.env.NETLIFY ? { nodeMiddleware: true } : {},
   trailingSlash: true,
   images: {
     unoptimized: true
