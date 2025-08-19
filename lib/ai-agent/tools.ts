@@ -375,11 +375,85 @@ const utilityTools: Tool[] = [
   }
 ];
 
+// Apple App Store Connect tools
+const appleTools: Tool[] = [
+  {
+    name: 'apple_list_apps',
+    description: 'List Apple App Store Connect apps (requires Apple env vars enabled)',
+    parameters: { type: 'object', properties: {}, required: [] },
+    execute: async () => {
+      try {
+        const res = await fetch('/api/appstore/apps');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to list apps');
+        return { success: true, data };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to list apps' };
+      }
+    }
+  },
+  {
+    name: 'apple_list_builds',
+    description: 'List builds across apps from App Store Connect',
+    parameters: { type: 'object', properties: {}, required: [] },
+    execute: async () => {
+      try {
+        const res = await fetch('/api/appstore/builds');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to list builds');
+        return { success: true, data };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to list builds' };
+      }
+    }
+  },
+  {
+    name: 'apple_list_beta_groups',
+    description: 'List TestFlight beta groups for a given app id',
+    parameters: {
+      type: 'object',
+      properties: { app_id: { type: 'string', description: 'App Store Connect app ID' } },
+      required: ['app_id']
+    },
+    execute: async (args) => {
+      try {
+        const res = await fetch(`/api/appstore/apps/${args.app_id}/beta-groups`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to list beta groups');
+        return { success: true, data };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to list beta groups' };
+      }
+    }
+  }
+];
+
+// Stripe tools
+const stripeTools: Tool[] = [
+  {
+    name: 'stripe_get_portal_url',
+    description: 'Get a Stripe customer portal URL for managing subscription and billing',
+    parameters: { type: 'object', properties: {}, required: [] },
+    execute: async () => {
+      try {
+        const res = await fetch('/api/stripe/portal');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to get portal URL');
+        return { success: true, data };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to get portal URL' };
+      }
+    }
+  }
+];
+
 // All available tools
 export const availableTools: Tool[] = [
   ...memoryTools,
   ...systemTools,
-  ...utilityTools
+  ...utilityTools,
+  ...appleTools,
+  ...stripeTools,
 ];
 
 // Tool registry for easy lookup
