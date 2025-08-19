@@ -4,7 +4,6 @@ import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { SWRConfig } from 'swr';
 import { Toaster } from 'sonner';
-import { AuthProvider } from '@/components/auth/auth-provider';
 
 export const metadata: Metadata = {
   title: 'Vibe - Universal API Warehouse',
@@ -28,18 +27,16 @@ export default function RootLayout({
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
     >
       <body className="min-h-[100dvh] bg-gray-50">
-        <AuthProvider>
-          <SWRConfig
-            value={{
-              fallback: {
-                // Empty fallback - data will be fetched client-side
-              }
-            }}
-          >
-            {children}
-            <Toaster />
-          </SWRConfig>
-        </AuthProvider>
+        <SWRConfig
+          value={{
+            fallback: {
+              // Empty fallback - data will be fetched client-side
+            }
+          }}
+        >
+          {children}
+          <Toaster />
+        </SWRConfig>
       </body>
     </html>
   );
