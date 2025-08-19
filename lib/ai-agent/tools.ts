@@ -61,7 +61,7 @@ const memoryTools: Tool[] = [
       try {
         const result = await memoryClient.searchMemories({
           query: args.query as string,
-          memory_type: args.memory_type as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow' | undefined,
+          memory_type: args.type as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow' | undefined,
           tags: args.tags ? (args.tags as string).split(',').map(t => t.trim()) : undefined,
           limit: (args.limit as number) || 10
         });
@@ -69,13 +69,13 @@ const memoryTools: Tool[] = [
         return {
           success: true,
           data: {
-            memories: result.memories,
+            memories: result.results,
             total: result.total,
             query: args.query
           },
           metadata: {
             searchType: 'semantic',
-            resultsCount: result.memories.length
+            resultsCount: result.results.length
           }
         };
       } catch (error) {
@@ -207,13 +207,13 @@ const memoryTools: Tool[] = [
         return {
           success: true,
           data: {
-            memories: result.memories,
+            memories: result.data,
             total: result.total,
             page: result.page,
             limit: result.limit
           },
           metadata: {
-            hasMore: result.memories.length === result.limit,
+            hasMore: result.data.length === result.limit,
             totalPages: Math.ceil(result.total / result.limit)
           }
         };
@@ -328,13 +328,13 @@ const utilityTools: Tool[] = [
         const result = await memoryClient.listMemories({ limit: 1000 });
         
         // Analyze memory distribution
-        const byType = result.memories.reduce((acc, memory) => {
+        const byType = result.data.reduce((acc, memory) => {
           acc[memory.type] = (acc[memory.type] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
 
         // Analyze tags
-        const allTags = result.memories.flatMap(m => m.tags || []);
+        const allTags = result.data.flatMap(m => m.tags || []);
         const tagCounts = allTags.reduce((acc, tag) => {
           acc[tag] = (acc[tag] || 0) + 1;
           return acc;
@@ -345,7 +345,7 @@ const utilityTools: Tool[] = [
           .slice(0, 10);
 
         // Calculate content statistics
-        const contentLengths = result.memories.map(m => m.content.length);
+        const contentLengths = result.data.map(m => m.content.length);
         const avgContentLength = contentLengths.reduce((a, b) => a + b, 0) / contentLengths.length;
 
         return {
@@ -362,7 +362,7 @@ const utilityTools: Tool[] = [
           },
           metadata: {
             analyzedAt: new Date().toISOString(),
-            sampleSize: result.memories.length
+            sampleSize: result.data.length
           }
         };
       } catch (error) {

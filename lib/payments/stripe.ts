@@ -11,6 +11,9 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy
   apiVersion: '2025-06-30.basil'
 });
 
+// Avoid noisy build-time logs when no real Stripe key is configured
+const isDummyStripeKey = !process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === 'sk_test_dummy_key_for_build';
+
 export async function createCheckoutSession({
   team,
   priceId
@@ -147,6 +150,10 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
+  // Skip network calls entirely if no real key is set
+  if (isDummyStripeKey) {
+    return [];
+  }
   try {
     const prices = await stripe.prices.list({
       expand: ['data.product'],
@@ -170,6 +177,10 @@ export async function getStripePrices() {
 }
 
 export async function getStripeProducts() {
+  // Skip network calls entirely if no real key is set
+  if (isDummyStripeKey) {
+    return [];
+  }
   try {
     const products = await stripe.products.list({
       active: true,

@@ -1,10 +1,10 @@
 import { Suspense } from 'react';
-import { Login } from '../login';
+import { SupabaseLogin } from '../supabase-login';
 
 export default function SignUpPage() {
   return (
     <Suspense>
-      <Login mode="signup" />
+      <SupabaseLogin mode="signup" />
     </Suspense>
   );
 }
