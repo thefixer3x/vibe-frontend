@@ -69,10 +69,22 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     if (
       boolFromEnv(env.BACKUP_LOGIN_ENABLED) &&
       env.BACKUP_USER_EMAIL &&
-      env.BACKUP_USER_PASSWORD_HASH &&
       email.toLowerCase() === env.BACKUP_USER_EMAIL.toLowerCase()
     ) {
-      const ok = await comparePasswords(password, env.BACKUP_USER_PASSWORD_HASH);
+      // Support either a bcrypt hash or a plain password in env for convenience
+      let backupHash = env.BACKUP_USER_PASSWORD_HASH;
+      if (!backupHash && env.BACKUP_USER_PASSWORD) {
+        backupHash = await hashPassword(env.BACKUP_USER_PASSWORD);
+      }
+      if (!backupHash) {
+        return {
+          error: 'Backup login not fully configured.',
+          email,
+          password
+        };
+      }
+
+      const ok = await comparePasswords(password, backupHash);
       if (!ok) {
         return {
           error: 'Invalid email or password. Please try again.',
@@ -82,7 +94,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       }
 
       // Create minimal owner account and team on first backup login
-      const passwordHash = env.BACKUP_USER_PASSWORD_HASH;
+      const passwordHash = backupHash;
       const newUser: NewUser = {
         email,
         passwordHash,

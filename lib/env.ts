@@ -14,6 +14,7 @@ const EnvSchema = z.object({
   BACKUP_LOGIN_ENABLED: z.string().optional(),
   BACKUP_USER_EMAIL: z.string().email().optional(),
   BACKUP_USER_PASSWORD_HASH: z.string().optional(),
+  BACKUP_USER_PASSWORD: z.string().optional(),
 
   // Database
   POSTGRES_URL: z.string().url().optional(),
