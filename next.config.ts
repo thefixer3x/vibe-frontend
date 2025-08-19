@@ -1,4 +1,5 @@
-import type { NextConfig } from 'next';
+// Note: keep this file simple and avoid strict typing to ensure
+// compatibility across Vercel/Netlify environments.
 
 const SECURITY_HEADERS = [
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -26,11 +27,10 @@ const SECURITY_HEADERS = [
   }
 ];
 
-const nextConfig: NextConfig = {
-  experimental: {
-    // Enable Node middleware runtime to improve compatibility on Netlify
-    nodeMiddleware: true,
-  },
+const nextConfig = {
+  // Enable Node middleware runtime only on Netlify builds to silence warnings there.
+  // Vercel doesn't require this and may behave differently, so gate by env.
+  experimental: process.env.NETLIFY ? { nodeMiddleware: true } : {},
   trailingSlash: true,
   images: {
     unoptimized: true
