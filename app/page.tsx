@@ -11,10 +11,10 @@ export default function HomePage() {
               Vibe - Universal API Warehouse
             </div>
             <div className="space-x-4">
-              <Link href="/sign-in" className="text-gray-600 hover:text-gray-900">
-                Sign In
+              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
+                Open Dashboard
               </Link>
-              <Link href="/sign-up" className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600">
+              <Link href="/dashboard" className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600">
                 Get Started
               </Link>
             </div>
@@ -34,7 +34,7 @@ export default function HomePage() {
           </p>
           
           <div className="space-x-4 mb-12">
-            <Link href="/sign-up" className="bg-orange-500 text-white px-8 py-3 rounded-lg text-lg hover:bg-orange-600 inline-block">
+            <Link href="/dashboard" className="bg-orange-500 text-white px-8 py-3 rounded-lg text-lg hover:bg-orange-600 inline-block">
               Start Testing APIs
             </Link>
             <Link href="/pricing" className="border border-gray-300 text-gray-700 px-8 py-3 rounded-lg text-lg hover:bg-gray-50 inline-block">

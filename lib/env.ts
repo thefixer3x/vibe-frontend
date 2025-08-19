@@ -7,6 +7,9 @@ const EnvSchema = z.object({
 
   // Auth / Security
   AUTH_SECRET: z.string().min(16, 'AUTH_SECRET must be at least 16 characters').optional(),
+  SINGLE_USER_MODE: z.string().optional(),
+  ADMIN_ACCESS_KEY: z.string().optional(),
+  ADMIN_EMAIL: z.string().email().optional(),
 
   // Database
   POSTGRES_URL: z.string().url().optional(),
@@ -47,4 +50,3 @@ export function boolFromEnv(value: string | undefined, defaultValue = false) {
   if (value === undefined) return defaultValue;
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
 }
-

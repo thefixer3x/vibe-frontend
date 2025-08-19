@@ -1,10 +1,5 @@
-import { Suspense } from 'react';
-import { SupabaseLogin } from '../supabase-login';
+import { redirect } from 'next/navigation';
 
 export default function SignUpPage() {
-  return (
-    <Suspense>
-      <SupabaseLogin mode="signup" />
-    </Suspense>
-  );
+  redirect('/dashboard');
 }

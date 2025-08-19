@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { signToken, verifyToken } from '@/lib/auth/session';
 import { rateLimit, getClientIp } from '@/lib/security/rate-limit';
+import { env, boolFromEnv } from '@/lib/env';
 
 const protectedRoutes = '/dashboard';
 
@@ -9,6 +10,28 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
   const isProtectedRoute = pathname.startsWith(protectedRoutes);
+
+  // Single-user mode: allow admin access without sign-in using a one-time access key.
+  if (boolFromEnv(env.SINGLE_USER_MODE)) {
+    const adminCookie = request.cookies.get('admin');
+    const adminKey = env.ADMIN_ACCESS_KEY;
+
+    if (!adminCookie?.value) {
+      const urlKey = request.nextUrl.searchParams.get('key');
+      if (adminKey && urlKey && adminKey === urlKey) {
+        // Set a simple admin cookie and proceed
+        const res = NextResponse.next();
+        res.cookies.set({ name: 'admin', value: '1', httpOnly: true, sameSite: 'lax', secure: true, path: '/' });
+        return res;
+      }
+      if (isProtectedRoute) {
+        // Redirect to homepage prompting for key usage
+        const redirectUrl = new URL('/', request.url);
+        redirectUrl.searchParams.set('auth', 'required');
+        return NextResponse.redirect(redirectUrl);
+      }
+    }
+  }
 
   // Lightweight rate limiting for sensitive endpoints (single-user-friendly)
   if (request.method === 'POST') {
