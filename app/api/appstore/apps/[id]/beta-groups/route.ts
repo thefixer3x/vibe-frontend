@@ -4,13 +4,14 @@ import { env, boolFromEnv } from '@/lib/env';
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     if (!boolFromEnv(env.ENABLE_APPLE_CONNECT)) {
       return NextResponse.json({ error: 'Apple Connect is disabled' }, { status: 501 });
     }
-    const data = await appStoreClient.listTestFlightBetaGroups(params.id);
+    const { id } = await params;
+    const data = await appStoreClient.listTestFlightBetaGroups(id);
     return NextResponse.json({ data });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

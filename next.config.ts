@@ -28,12 +28,11 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig = {
-  trailingSlash: true,
   images: {
     unoptimized: true
   },
-  eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: false },
+  typescript: { ignoreBuildErrors: false },
   async headers() {
     return [
       {

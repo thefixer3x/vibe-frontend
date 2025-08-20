@@ -7,24 +7,32 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CircleIcon, Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+// TODO: Re-enable when Supabase integration is needed
+// import { createClient } from '@/lib/supabase/client'
+
+// DISABLED: Supabase login component for future integration
+// Current app uses custom JWT auth in app/(login)/sign-in and app/(login)/sign-up
 
 export function SupabaseLogin({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState('Supabase authentication is currently disabled. Please use the custom auth pages.')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   
   const redirect = searchParams.get('redirect')
-  const supabase = createClient()
+  // TODO: Re-enable when Supabase integration is ready
+  // const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError('')
-
+    setError('Supabase authentication is currently disabled. Please use /sign-in or /sign-up pages instead.')
+    setLoading(false)
+    
+    // TODO: Re-enable when Supabase integration is ready
+    /*
     try {
       if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({
@@ -46,6 +54,7 @@ export function SupabaseLogin({ mode = 'signin' }: { mode?: 'signin' | 'signup' 
     } finally {
       setLoading(false)
     }
+    */
   }
 
   return (

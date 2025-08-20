@@ -3,7 +3,7 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "installCommand": "bun install",
-  "devCommand": "npm run dev",
+  "devCommand": "bun run dev",
   "rewrites": [
     {
       "source": "/api/:path*",

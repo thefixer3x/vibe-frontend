@@ -367,7 +367,7 @@ class MemoryClient {
 
   getMCPConnectionStatus() {
     if (!this.mcpClient) {
-      return { connected: false, mode: 'disabled' as const };
+      return { connected: false, mode: 'disconnected' as const };
     }
     
     return {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ export function MemoryDashboard({ onStatsUpdate }: MemoryDashboardProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setRefreshing(true);
     try {
       // Load stats
@@ -38,8 +38,8 @@ export function MemoryDashboard({ onStatsUpdate }: MemoryDashboardProps) {
       onStatsUpdate?.(memoryStats);
 
       // Load recent memories
-      const recentResponse = await memoryClient.listMemories({ 
-        limit: 10, 
+      const recentResponse = await memoryClient.listMemories({
+        limit: 10,
         sort: 'updated_at',
         order: 'desc',
         memory_type: filterType === 'all' ? undefined : filterType as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow'
@@ -51,7 +51,7 @@ export function MemoryDashboard({ onStatsUpdate }: MemoryDashboardProps) {
       setIsLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [filterType, onStatsUpdate]);
 
   const handleExportStats = async () => {
     if (!stats) return;

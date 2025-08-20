@@ -1,106 +1,21 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { signToken, verifyToken } from '@/lib/auth/session';
-import { rateLimit, getClientIp } from '@/lib/security/rate-limit';
-import { env, boolFromEnv } from '@/lib/env';
-
-const protectedRoutes = '/dashboard';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const sessionCookie = request.cookies.get('session');
-  const isProtectedRoute = pathname.startsWith(protectedRoutes);
-  let adminAuthorized = false;
 
-  // Single-user mode: allow admin access without sign-in using a one-time access key.
-  if (boolFromEnv(env.SINGLE_USER_MODE)) {
-    const adminCookie = request.cookies.get('admin');
-    const adminKey = env.ADMIN_ACCESS_KEY;
-
-    // If admin cookie already set, mark as authorized for protected routes
-    if (adminCookie?.value === '1') {
-      adminAuthorized = true;
-    } else {
-      // Allow granting access via URL or header key
-      const urlKey = request.nextUrl.searchParams.get('key');
-      const headerKey = request.headers.get('x-admin-key');
-      if (adminKey && ((urlKey && adminKey === urlKey) || (headerKey && adminKey === headerKey))) {
-        // Set admin cookie, then redirect to same URL without exposing the key
-        const url = new URL(request.url);
-        url.searchParams.delete('key');
-        url.searchParams.set('admin_granted', '1');
-        const res = NextResponse.redirect(url);
-        res.cookies.set({ name: 'admin', value: '1', httpOnly: true, sameSite: 'lax', secure: true, path: '/' });
-        return res;
-      }
-      if (isProtectedRoute) {
-        // Prompt for admin key on protected pages
-        const redirectUrl = new URL('/', request.url);
-        redirectUrl.searchParams.set('auth', 'required');
-        return NextResponse.redirect(redirectUrl);
-      }
-    }
+  // Only handle dashboard routes - redirect to sign-in
+  if (pathname.startsWith('/dashboard')) {
+    return NextResponse.redirect(new URL('/sign-in', request.url));
   }
 
-  // Lightweight rate limiting for sensitive endpoints (single-user-friendly)
-  if (request.method === 'POST') {
-    const ip = getClientIp(request as unknown as Request);
-    const keyBase = `${ip}:${pathname}`;
-    // Tighter limit on sign-in; moderate on memory API
-    const isSignIn = pathname.includes('/sign-in');
-    const isMemoryApi = pathname.startsWith('/api/memory');
-    const limit = isSignIn ? 5 : isMemoryApi ? 60 : 0; // 5/min on sign-in, 60/min on memory API
-    if (limit > 0) {
-      const res = rateLimit({ key: keyBase, limit, windowMs: 60_000 });
-      if (!res.allowed) {
-        return new NextResponse('Too Many Requests', {
-          status: 429,
-          headers: {
-            'Retry-After': Math.ceil(res.resetInMs / 1000).toString()
-          }
-        });
-      }
-    }
-  }
-
-  // In single-user mode, allow access with admin cookie even without a user session
-  if (isProtectedRoute) {
-    if (!sessionCookie && !adminAuthorized) {
-      return NextResponse.redirect(new URL('/sign-in', request.url));
-    }
-  }
-
-  let res = NextResponse.next();
-
-  if (sessionCookie && request.method === 'GET') {
-    try {
-      const parsed = await verifyToken(sessionCookie.value);
-      const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-      res.cookies.set({
-        name: 'session',
-        value: await signToken({
-          ...parsed,
-          expires: expiresInOneDay.toISOString()
-        }),
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        expires: expiresInOneDay
-      });
-    } catch (error) {
-      console.error('Error updating session:', error);
-      res.cookies.delete('session');
-      if (isProtectedRoute) {
-        return NextResponse.redirect(new URL('/sign-in', request.url));
-      }
-    }
-  }
-
-  return res;
+  // Allow all other routes to pass through
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
-  runtime: 'nodejs'
+  matcher: [
+    // Match all paths except API routes, static files, and favicon
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ]
 };

@@ -200,13 +200,13 @@ class MCPClient {
       if (result.isError) {
         return {
           success: false,
-          error: result.content[0]?.text || 'Tool call failed'
+          error: String(result.content[0]?.text || 'Tool call failed')
         };
       }
 
       return {
         success: true,
-        data: result.content[0]?.text ? JSON.parse(result.content[0].text) : null
+        data: result.content[0]?.text ? JSON.parse(String(result.content[0].text)) : null
       };
     } catch (error) {
       return {
@@ -360,4 +360,5 @@ export function getMCPClient(config?: Partial<MCPConfig>): MCPClient {
   return mcpClientInstance;
 }
 
+export { MCPClient };
 export default MCPClient;

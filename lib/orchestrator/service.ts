@@ -24,7 +24,7 @@ export interface OrchestratorResult {
   error?: string;
   executionTime: number;
   command: OrchestratorCommand;
-  mcpMode?: 'local' | 'remote' | 'disabled';
+  mcpMode?: 'local' | 'remote' | 'disconnected';
 }
 
 class OrchestratorService {
@@ -331,7 +331,7 @@ class OrchestratorService {
         error: error instanceof Error ? error.message : 'Unknown error',
         executionTime: Date.now() - startTime,
         command,
-        mcpMode: 'disabled'
+        mcpMode: 'disconnected'
       };
     }
   }

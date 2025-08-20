@@ -15,7 +15,7 @@ export interface AgentResponse {
   toolResults?: ToolResult[];
   reasoning?: string;
   confidence?: number;
-  mcpMode?: 'local' | 'remote' | 'disabled';
+  mcpMode?: 'local' | 'remote' | 'disabled' | 'disconnected';
 }
 
 class AIAgentService {

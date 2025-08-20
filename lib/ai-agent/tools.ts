@@ -118,7 +118,7 @@ const memoryTools: Tool[] = [
         const result = await memoryClient.createMemory({
           title: args.title as string,
           content: args.content as string,
-          type: args.type as any,
+          memory_type: args.type as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
           tags: args.tags ? (args.tags as string).split(',').map(t => t.trim()) : undefined
         });
 
@@ -127,7 +127,7 @@ const memoryTools: Tool[] = [
           data: {
             id: result.id,
             title: result.title,
-            type: result.type,
+            type: result.memory_type,
             message: 'Memory created successfully'
           }
         };
@@ -198,7 +198,7 @@ const memoryTools: Tool[] = [
     execute: async (args) => {
       try {
         const result = await memoryClient.listMemories({
-          type: args.type as any,
+          memory_type: args.type as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow' | undefined,
           tags: args.tags ? (args.tags as string).split(',').map(t => t.trim()) : undefined,
           limit: (args.limit as number) || 20,
           page: (args.page as number) || 1
@@ -329,7 +329,7 @@ const utilityTools: Tool[] = [
         
         // Analyze memory distribution
         const byType = result.data.reduce((acc, memory) => {
-          acc[memory.type] = (acc[memory.type] || 0) + 1;
+          acc[memory.memory_type] = (acc[memory.memory_type] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
 

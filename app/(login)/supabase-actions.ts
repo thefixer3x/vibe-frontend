@@ -2,9 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+// TODO: Re-enable when Supabase integration is needed
+// import { createClient } from '@/lib/supabase/server'
+
+// DISABLED: Supabase authentication functions for future integration
+// Current app uses custom JWT auth in app/(login)/actions.ts
 
 export async function signIn(formData: FormData) {
+  // TODO: Implement Supabase auth when ready
+  return { error: 'Supabase authentication is currently disabled. Use custom auth instead.' }
+  
+  /*
   const supabase = await createClient()
 
   const data = {
@@ -20,9 +28,14 @@ export async function signIn(formData: FormData) {
 
   revalidatePath('/', 'layout')
   redirect('/dashboard')
+  */
 }
 
 export async function signUp(formData: FormData) {
+  // TODO: Implement Supabase auth when ready
+  return { error: 'Supabase authentication is currently disabled. Use custom auth instead.' }
+  
+  /*
   const supabase = await createClient()
 
   const data = {
@@ -38,11 +51,17 @@ export async function signUp(formData: FormData) {
 
   revalidatePath('/', 'layout')
   redirect('/dashboard')
+  */
 }
 
 export async function signOut() {
+  // TODO: Implement Supabase auth when ready
+  return { error: 'Supabase authentication is currently disabled. Use custom auth instead.' }
+  
+  /*
   const supabase = await createClient()
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
   redirect('/sign-in')
+  */
 }

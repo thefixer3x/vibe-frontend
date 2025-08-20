@@ -45,7 +45,7 @@ export function OrchestratorInterface({
   const [serviceStatuses, setServiceStatuses] = useState<any[]>([]);
   const [conversationHistory, setConversationHistory] = useState<AIMessage[]>([]);
   const [mode, setMode] = useState<'orchestrator' | 'ai-agent'>(useAIAgent ? 'ai-agent' : 'orchestrator');
-  const [mcpStatus, setMcpStatus] = useState<{ connected: boolean; mode: 'local' | 'remote' | 'disconnected' | 'disabled' }>({ connected: false, mode: 'disconnected' });
+  const [mcpStatus, setMcpStatus] = useState<{ connected: boolean; mode: 'local' | 'remote' | 'disconnected' }>({ connected: false, mode: 'disconnected' });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -256,7 +256,7 @@ Type your command below and press Enter!`;
     let content = `✅ **${command.tool}.${command.action}** (${executionTime}ms)`;
     
     // Add MCP mode indicator if available
-    if (mcpMode && mcpMode !== 'disabled') {
+    if (mcpMode && mcpMode !== 'disconnected') {
       content += ` [MCP ${mcpMode}]`;
     }
     

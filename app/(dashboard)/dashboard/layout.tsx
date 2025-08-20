@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ export default function DashboardLayout({
   const [showAdminBanner, setShowAdminBanner] = useState(false);
 
   // Show one-time banner after admin key grant
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       if (params.get('admin_granted') === '1') {
