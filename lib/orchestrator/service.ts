@@ -99,7 +99,7 @@ class OrchestratorService {
         
         if (mcpStatus.connected) {
           service.status = 'connected';
-          service._mode = mcpStatus._mode === 'local' ? 'mcp-local' : 'mcp-remote';
+          // service.mode = mcpStatus.mode === 'local' ? 'mcp-local' : 'mcp-remote'; // mode not part of ServiceStatus
           service.error = undefined;
         } else {
           // Try to list memories to check if REST API is responsive
@@ -347,7 +347,7 @@ class OrchestratorService {
         return {
           memories: searchResults.results,
           total: searchResults.total,
-          mcpMode: memoryClient.getMCPConnectionStatus()._mode
+          mcpMode: memoryClient.getMCPConnectionStatus().mode
         };
 
       case 'create':
@@ -360,7 +360,7 @@ class OrchestratorService {
           id: newMemory.id,
           title: newMemory.title,
           message: 'Memory created successfully',
-          mcpMode: memoryClient.getMCPConnectionStatus()._mode
+          mcpMode: memoryClient.getMCPConnectionStatus().mode
         };
 
       case 'list':
@@ -370,7 +370,7 @@ class OrchestratorService {
         return {
           memories: listResults.data,
           total: listResults.total,
-          mcpMode: memoryClient.getMCPConnectionStatus()._mode
+          mcpMode: memoryClient.getMCPConnectionStatus().mode
         };
 
       case 'stats':
@@ -383,7 +383,7 @@ class OrchestratorService {
         return {
           total_memories: statsResults.total,
           by_type: byType,
-          mcpMode: memoryClient.getMCPConnectionStatus()._mode
+          mcpMode: memoryClient.getMCPConnectionStatus().mode
         };
 
       default:
@@ -421,7 +421,7 @@ class OrchestratorService {
         };
 
       case 'mcp-connect':
-        const _mode = command.parameters._mode as 'local' | 'remote' | 'auto';
+        const _mode = command.parameters.mode as 'local' | 'remote' | 'auto';
         const connected = await this.mcpClient.connect();
         
         if (connected) {

@@ -165,7 +165,7 @@ async function createStripeWebhook(): Promise<string> {
     }
     console.log('Stripe webhook created.');
     return match[0];
-  } catch {
+  } catch (error) {
     console.error(
       'Failed to create Stripe webhook. Check your Stripe CLI installation and permissions.'
     );
@@ -174,7 +174,7 @@ async function createStripeWebhook(): Promise<string> {
         'Note: On Windows, you may need to run this script as an administrator.'
       );
     }
-    throw _error;
+    throw error;
   }
 }
 
