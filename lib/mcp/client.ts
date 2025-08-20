@@ -235,19 +235,19 @@ class MCPClient {
       },
       'memory_get_memory': {
         method: 'GET',
-        endpoint: (args) => `/api/memory/${args.memory_id}`
+        endpoint: (args) => `/api/memory/${args._memory_id}`
       },
       'memory_update_memory': {
         method: 'PUT',
-        endpoint: (args) => `/api/memory/${args.memory_id}`,
+        endpoint: (args) => `/api/memory/${args._memory_id}`,
         body: (args) => {
-          const { memory_id, ...data } = args;
+          const { _memory_id, ...data } = args;
           return data;
         }
       },
       'memory_delete_memory': {
         method: 'DELETE',
-        endpoint: (args) => `/api/memory/${args.memory_id}`
+        endpoint: (args) => `/api/memory/${args._memory_id}`
       },
       'memory_list_memories': {
         method: 'GET',

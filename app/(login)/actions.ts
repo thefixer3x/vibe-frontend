@@ -162,7 +162,7 @@ const signUpSchema = z.object({
   inviteId: z.string().optional()
 });
 
-export const signUp = validatedAction(signUpSchema, async (data, formData) => {
+export const signUp = validatedAction(signUpSchema, async (data, _formData) => {
   const { email, password } = data;
 
   // Check if user already exists

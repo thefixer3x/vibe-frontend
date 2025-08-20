@@ -7,7 +7,7 @@ export interface ServiceStatus {
   url?: string;
   lastCheck: Date;
   error?: string;
-  mode?: 'mcp-local' | 'mcp-remote' | 'rest-api';
+  _mode?: 'mcp-local' | 'mcp-remote' | 'rest-api';
 }
 
 export interface OrchestratorCommand {
@@ -40,12 +40,12 @@ class OrchestratorService {
     try {
       const connected = await this.mcpClient.connect();
       if (connected) {
-        console.log('Orchestrator: MCP connected, mode:', this.mcpClient.getConnectionMode());
+        console.log('Orchestrator: MCP connected, _mode:', this.mcpClient.getConnectionMode());
         
         // Update memory service status based on MCP connection
         const memoryService = this.services.get('memory');
         if (memoryService) {
-          memoryService.mode = this.mcpClient.getConnectionMode() === 'local' ? 'mcp-local' : 'mcp-remote';
+          memoryService._mode = this.mcpClient.getConnectionMode() === 'local' ? 'mcp-local' : 'mcp-remote';
           memoryService.status = 'connected';
           this.services.set('memory', memoryService);
         }
@@ -69,7 +69,7 @@ class OrchestratorService {
       status: 'disconnected',
       url: memoryServiceUrl,
       lastCheck: new Date(),
-      mode: 'rest-api'
+      _mode: 'rest-api'
     });
 
     this.services.set('frontend', {
@@ -99,7 +99,7 @@ class OrchestratorService {
         
         if (mcpStatus.connected) {
           service.status = 'connected';
-          service.mode = mcpStatus.mode === 'local' ? 'mcp-local' : 'mcp-remote';
+          service._mode = mcpStatus._mode === 'local' ? 'mcp-local' : 'mcp-remote';
           service.error = undefined;
         } else {
           // Try to list memories to check if REST API is responsive
@@ -113,7 +113,7 @@ class OrchestratorService {
           ]);
           
           service.status = 'connected';
-          service.mode = 'rest-api';
+          service._mode = 'rest-api';
           service.error = undefined;
         }
       } else if (serviceName === 'frontend') {
@@ -126,7 +126,7 @@ class OrchestratorService {
         const mcpMode = this.mcpClient.getConnectionMode();
         
         service.status = mcpConnected ? 'connected' : 'disconnected';
-        service.mode = mcpMode === 'local' ? 'mcp-local' : mcpMode === 'remote' ? 'mcp-remote' : undefined;
+        service._mode = mcpMode === 'local' ? 'mcp-local' : mcpMode === 'remote' ? 'mcp-remote' : undefined;
         service.error = mcpConnected ? undefined : 'MCP not connected';
       }
     } catch (error) {
@@ -175,7 +175,7 @@ class OrchestratorService {
           target: 'mcp',
           tool: 'orchestrator',
           parameters: { 
-            mode: command.includes('local') ? 'local' : command.includes('remote') ? 'remote' : 'auto'
+            _mode: command.includes('local') ? 'local' : command.includes('remote') ? 'remote' : 'auto'
           },
           confidence: 0.9
         };
@@ -347,7 +347,7 @@ class OrchestratorService {
         return {
           memories: searchResults.results,
           total: searchResults.total,
-          mcpMode: memoryClient.getMCPConnectionStatus().mode
+          mcpMode: memoryClient.getMCPConnectionStatus()._mode
         };
 
       case 'create':
@@ -360,7 +360,7 @@ class OrchestratorService {
           id: newMemory.id,
           title: newMemory.title,
           message: 'Memory created successfully',
-          mcpMode: memoryClient.getMCPConnectionStatus().mode
+          mcpMode: memoryClient.getMCPConnectionStatus()._mode
         };
 
       case 'list':
@@ -370,7 +370,7 @@ class OrchestratorService {
         return {
           memories: listResults.data,
           total: listResults.total,
-          mcpMode: memoryClient.getMCPConnectionStatus().mode
+          mcpMode: memoryClient.getMCPConnectionStatus()._mode
         };
 
       case 'stats':
@@ -383,7 +383,7 @@ class OrchestratorService {
         return {
           total_memories: statsResults.total,
           by_type: byType,
-          mcpMode: memoryClient.getMCPConnectionStatus().mode
+          mcpMode: memoryClient.getMCPConnectionStatus()._mode
         };
 
       default:
@@ -416,19 +416,19 @@ class OrchestratorService {
             total: statuses.length,
             connected: statuses.filter(s => s.status === 'connected').length,
             errors: statuses.filter(s => s.status === 'error').length,
-            mcpEnabled: statuses.some(s => s.mode?.startsWith('mcp'))
+            mcpEnabled: statuses.some(s => s._mode?.startsWith('mcp'))
           }
         };
 
       case 'mcp-connect':
-        const mode = command.parameters.mode as 'local' | 'remote' | 'auto';
+        const _mode = command.parameters._mode as 'local' | 'remote' | 'auto';
         const connected = await this.mcpClient.connect();
         
         if (connected) {
           await this.checkServiceHealth('mcp');
           return {
-            message: `MCP connected in ${this.mcpClient.getConnectionMode()} mode`,
-            mode: this.mcpClient.getConnectionMode(),
+            message: `MCP connected in ${this.mcpClient.getConnectionMode()} _mode`,
+            _mode: this.mcpClient.getConnectionMode(),
             connected: true
           };
         } else {
@@ -441,14 +441,14 @@ class OrchestratorService {
       case 'mcp-status':
         const mcpStatus = {
           connected: this.mcpClient.isConnectedToServer(),
-          mode: this.mcpClient.getConnectionMode(),
+          _mode: this.mcpClient.getConnectionMode(),
           memoryClientStatus: memoryClient.getMCPConnectionStatus()
         };
         
         return {
           mcp: mcpStatus,
           message: mcpStatus.connected 
-            ? `MCP is connected in ${mcpStatus.mode} mode`
+            ? `MCP is connected in ${mcpStatus._mode} _mode`
             : 'MCP is not connected'
         };
 
@@ -478,7 +478,7 @@ class OrchestratorService {
   getMCPStatus() {
     return {
       connected: this.mcpClient.isConnectedToServer(),
-      mode: this.mcpClient.getConnectionMode()
+      _mode: this.mcpClient.getConnectionMode()
     };
   }
 

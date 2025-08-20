@@ -37,7 +37,7 @@ try {
       delete: () => ({ where: () => Promise.resolve() })
     };
   }
-} catch (_error) {
+} catch {
   console.warn('Database connection failed, using mock database');
   db = {
     select: () => ({ 
