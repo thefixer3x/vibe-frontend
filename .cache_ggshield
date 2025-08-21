@@ -1,1 +1,1 @@
-{"last_found_secrets": [{"match": "bd17056b5465e3cf551089b16602ae8d63c08357cbd434a96680d3eb4f50a18f", "name": "Generic High Entropy Secret - commit://staged/.env.example"}]}
+{"last_found_secrets": [{"match": "c31de7e21dc0b4b5a1cd6ca7453cffad434f95d38984e732261e986cbede3282", "name": "PostgreSQL URI - commit://staged/MCP_CONFIGURATION_GUIDE.md"}, {"match": "305fe17678c482309c87216009a8180f2028436fa7c9e303979771db209183ef", "name": "Stripe Keys - commit://staged/MCP_CONFIGURATION_GUIDE.md"}]}

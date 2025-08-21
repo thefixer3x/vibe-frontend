@@ -19,17 +19,14 @@ Vibe is a universal API warehouse and VPS management platform that integrates wi
 
 ### Integration Modes
 ```
-Local Development:
-├── Direct WebSocket - ws://localhost:9083/mcp (via Onasis-CORE)
+Live Production:
+├── Secure WebSocket - wss://mcp.lanonasis.com/mcp (via Onasis-CORE)
 ├── Enhanced Tools - 17 tools including memory, API keys, system
 ├── Vector Search - Semantic memory search and retrieval
-└── Real-time Sync - Live memory updates and notifications
-
-Production:
-├── HTTPS API Gateway - https://mcp.lanonasis.com
+├── Real-time Sync - Live memory updates and notifications
 ├── API Key Auth - Secure token-based authentication
-├── CDN Distribution - Global edge network
-└── High Availability - Multi-region deployment
+├── SSL/TLS Encryption - End-to-end security
+└── High Availability - Auto-deployed on commit
 ```
 
 ## Quick Start Configuration
@@ -40,8 +37,8 @@ Create or update `.env.local`:
 
 ```bash
 # MCP Configuration - Auto-detection for dev/prod
-NEXT_PUBLIC_MCP_MODE=auto
-NEXT_PUBLIC_MCP_SERVER_URL=ws://localhost:9083/mcp
+NEXT_PUBLIC_MCP_MODE=remote
+NEXT_PUBLIC_MCP_SERVER_URL=wss://mcp.lanonasis.com/mcp
 NEXT_PUBLIC_GATEWAY_URL=https://mcp.lanonasis.com
 
 # Memory Service Authentication

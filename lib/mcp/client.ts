@@ -37,7 +37,7 @@ class MCPClient {
       const host = window.location.hostname;
       if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) {
         // Route through Onasis-CORE MCP server for enhanced 17-tool functionality
-        defaultLocalUrl = 'ws://localhost:9083/mcp';
+        defaultLocalUrl = 'wss://mcp.lanonasis.com/mcp';
       }
     } else {
       // Node context (SSR/build): leave undefined to avoid leaking localhost into client bundles
@@ -47,7 +47,7 @@ class MCPClient {
     this.config = {
       mode: config?.mode || 'auto',
       localServerUrl: config?.localServerUrl || process.env.NEXT_PUBLIC_MCP_SERVER_URL || defaultLocalUrl,
-      remoteApiUrl: config?.remoteApiUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://api.lanonasis.com',
+      remoteApiUrl: config?.remoteApiUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://mcp.lanonasis.com',
       apiKey: config?.apiKey || process.env.NEXT_PUBLIC_MEMORY_API_KEY,
       userId: config?.userId
     };
