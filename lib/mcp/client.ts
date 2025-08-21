@@ -36,7 +36,8 @@ class MCPClient {
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
       if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) {
-        defaultLocalUrl = 'ws://localhost:3002/mcp';
+        // Route through Onasis-CORE MCP server for enhanced 17-tool functionality
+        defaultLocalUrl = 'ws://localhost:9083/mcp';
       }
     } else {
       // Node context (SSR/build): leave undefined to avoid leaking localhost into client bundles
@@ -130,13 +131,21 @@ class MCPClient {
   private initializeSSE(): void {
     if (!this.config.apiKey || !this.config.remoteApiUrl) return;
     
+    // Only initialize SSE on client side
+    if (typeof window === 'undefined') return;
+    
     const sseUrl = new URL('/api/sse', this.config.remoteApiUrl);
     sseUrl.searchParams.set('apiKey', this.config.apiKey);
     if (this.config.userId) {
       sseUrl.searchParams.set('userId', this.config.userId);
     }
     
-    this.sseConnection = new EventSource(sseUrl.toString());
+    try {
+      this.sseConnection = new EventSource(sseUrl.toString());
+    } catch (error) {
+      console.warn('Failed to initialize SSE connection:', error);
+      return;
+    }
     
     this.sseConnection.addEventListener('memory.created', (event) => {
       const data = JSON.parse(event.data);

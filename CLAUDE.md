@@ -5,18 +5,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 **Build and Development:**
-- `npm run dev` - Start development server with Turbopack
-- `npm run build` - Build production version
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint (enforced during builds)
-- `npm run type-check` - Run TypeScript type checking (enforced during builds)
+- `bun run dev` - Start development server with Turbopack
+- `bun run build` - Build production version
+- `bun run start` - Start production server
+- `bun run lint` - Run ESLint (enforced during builds)
+- `bun run type-check` - Run TypeScript type checking (enforced during builds)
 
 **Database Operations:**
-- `npm run db:setup` - Initialize database schema
-- `npm run db:seed` - Populate database with seed data
-- `npm run db:generate` - Generate Drizzle migrations
-- `npm run db:migrate` - Apply database migrations
-- `npm run db:studio` - Open Drizzle Studio for database inspection
+- `bun run db:setup` - Initialize database schema
+- `bun run db:seed` - Populate database with seed data
+- `bun run db:generate` - Generate Drizzle migrations
+- `bun run db:migrate` - Apply database migrations
+- `bun run db:studio` - Open Drizzle Studio for database inspection
 
 ## Project Architecture
 
