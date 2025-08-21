@@ -7,12 +7,12 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy_key_for_build', {
+export const stripe = new Stripe((process.env.STRIPE_SECRET_KEY || 'sk_test_dummy_key_for_build').trim(), {
   apiVersion: '2025-06-30.basil'
 });
 
 // Avoid noisy build-time logs when no real Stripe key is configured
-const isDummyStripeKey = !process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === 'sk_test_dummy_key_for_build';
+const isDummyStripeKey = !process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.trim() === 'sk_test_dummy_key_for_build';
 
 export async function createCheckoutSession({
   team,
