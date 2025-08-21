@@ -1,0 +1,4 @@
+lib/standalone/
+lib/standalone_backup/
+*.map
+*.min.js
