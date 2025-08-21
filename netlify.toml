@@ -25,6 +25,8 @@
   NPM_VERSION = "9"
   # Use Bun on Netlify build image
   BUN_VERSION = "1.1.21"
+  # Set NODE_ENV to production to avoid Html import errors
+  NODE_ENV = "production"
 
 # Headers for API routes
 [[headers]]
