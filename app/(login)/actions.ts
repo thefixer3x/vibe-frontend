@@ -69,6 +69,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     if (
       boolFromEnv(env.BACKUP_LOGIN_ENABLED) &&
       env.BACKUP_USER_EMAIL &&
+      z.string().email().safeParse(env.BACKUP_USER_EMAIL).success &&
       email.toLowerCase() === env.BACKUP_USER_EMAIL.toLowerCase()
     ) {
       // Support either a bcrypt hash or a plain password in env for convenience
@@ -93,30 +94,80 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
         };
       }
 
-      // Create minimal owner account and team on first backup login
-      const passwordHash = backupHash;
-      const newUser: NewUser = {
-        email,
-        passwordHash,
-        role: 'owner',
-        name: email.split('@')[0]
-      };
-      const [createdUser] = await db.insert(users).values(newUser).returning();
-      const newTeam: NewTeam = {
-        name: `${createdUser.name || email}'s Workspace`,
-        planName: 'pro',
-        subscriptionStatus: 'active'
-      };
-      const [createdTeam] = await db.insert(teams).values(newTeam).returning();
-      const newTeamMember: NewTeamMember = {
-        userId: createdUser.id,
-        teamId: createdTeam.id,
-        role: 'owner'
-      };
-      await db.insert(teamMembers).values(newTeamMember);
-      await setSession(createdUser);
-      await logActivity(createdTeam.id, createdUser.id, ActivityType.SIGN_IN);
-      return { redirect: '/dashboard' };
+      try {
+        // Check if backup user already exists in database
+        const existingBackupUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+        
+        if (existingBackupUser.length > 0) {
+          // User exists, just sign them in
+          const user = existingBackupUser[0];
+          const userWithTeam = await db
+            .select({
+              user: users,
+              team: teams
+            })
+            .from(users)
+            .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
+            .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+            .where(eq(users.id, user.id))
+            .limit(1);
+          
+          await setSession(user);
+          await logActivity(userWithTeam[0]?.team?.id, user.id, ActivityType.SIGN_IN);
+          return { redirect: '/dashboard' };
+        }
+
+        // Create minimal owner account and team on first backup login
+        const passwordHash = backupHash;
+        const newUser: NewUser = {
+          email,
+          passwordHash,
+          role: 'owner',
+          name: email.split('@')[0]
+        };
+        const [createdUser] = await db.insert(users).values(newUser).returning();
+        const newTeam: NewTeam = {
+          name: `${createdUser.name || email}'s Workspace`,
+          planName: 'pro',
+          subscriptionStatus: 'active'
+        };
+        const [createdTeam] = await db.insert(teams).values(newTeam).returning();
+        const newTeamMember: NewTeamMember = {
+          userId: createdUser.id,
+          teamId: createdTeam.id,
+          role: 'owner'
+        };
+        await db.insert(teamMembers).values(newTeamMember);
+        await setSession(createdUser);
+        await logActivity(createdTeam.id, createdUser.id, ActivityType.SIGN_IN);
+        return { redirect: '/dashboard' };
+      } catch (dbError) {
+        console.error('Database error during backup login:', dbError);
+        
+        // Fallback: create a temporary session without database when DB is unavailable
+        if (dbError && typeof dbError === 'object' && dbError !== null && 'code' in dbError && dbError.code === 'ECONNREFUSED') {
+          console.log('Database unavailable, using temporary session for backup login');
+          const tempUser: NewUser = {
+            id: 999, // Temporary ID
+            email,
+            passwordHash: backupHash,
+            role: 'owner',
+            name: email.split('@')[0]
+          };
+          await setSession(tempUser);
+          return { redirect: '/dashboard' };
+        }
+        
+        return {
+          error: 'Database connection failed. Please try again later.',
+          email,
+          password
+        };
+      }
     }
 
     return {

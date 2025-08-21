@@ -4,37 +4,17 @@ import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
 export async function getUser() {
-  const { db } = await import('./drizzle');
-  
-  const sessionCookie = (await cookies()).get('session');
-  if (!sessionCookie || !sessionCookie.value) {
-    return null;
-  }
-
-  const sessionData = await verifyToken(sessionCookie.value);
-  if (
-    !sessionData ||
-    !sessionData.user ||
-    typeof sessionData.user.id !== 'number'
-  ) {
-    return null;
-  }
-
-  if (new Date(sessionData.expires) < new Date()) {
-    return null;
-  }
-
-  const user = await db
-    .select()
-    .from(users)
-    .where(and(eq(users.id, sessionData.user.id), isNull(users.deletedAt)))
-    .limit(1);
-
-  if (user.length === 0) {
-    return null;
-  }
-
-  return user[0];
+  // Authentication disabled - return mock user
+  return {
+    id: 1,
+    email: 'user@example.com',
+    name: 'Mock User',
+    role: 'owner',
+    passwordHash: '',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null
+  };
 }
 
 export async function getTeamByStripeCustomerId(customerId: string) {
@@ -83,54 +63,50 @@ export async function getUserWithTeam(userId: number) {
 }
 
 export async function getActivityLogs() {
-  const { db } = await import('./drizzle');
-  const user = await getUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  return await db
-    .select({
-      id: activityLogs.id,
-      action: activityLogs.action,
-      timestamp: activityLogs.timestamp,
-      ipAddress: activityLogs.ipAddress,
-      userName: users.name
-    })
-    .from(activityLogs)
-    .leftJoin(users, eq(activityLogs.userId, users.id))
-    .where(eq(activityLogs.userId, user.id))
-    .orderBy(desc(activityLogs.timestamp))
-    .limit(10);
+  // Authentication disabled - return mock activity logs
+  return [
+    {
+      id: 1,
+      action: 'SIGN_IN',
+      timestamp: new Date(),
+      ipAddress: '127.0.0.1',
+      userName: 'Mock User'
+    },
+    {
+      id: 2,
+      action: 'UPDATE_ACCOUNT',
+      timestamp: new Date(Date.now() - 3600000),
+      ipAddress: '127.0.0.1',
+      userName: 'Mock User'
+    }
+  ];
 }
 
 export async function getTeamForUser() {
-  const { db } = await import('./drizzle');
-  const user = await getUser();
-  if (!user) {
-    return null;
-  }
-
-  const result = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    with: {
-      team: {
-        with: {
-          teamMembers: {
-            with: {
-              user: {
-                columns: {
-                  id: true,
-                  name: true,
-                  email: true
-                }
-              }
-            }
-          }
+  // Authentication disabled - return mock team
+  return {
+    id: 1,
+    name: 'Mock Team',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    stripeCustomerId: null,
+    stripeSubscriptionId: null,
+    stripeProductId: null,
+    planName: 'pro',
+    subscriptionStatus: 'active',
+    teamMembers: [
+      {
+        id: 1,
+        userId: 1,
+        teamId: 1,
+        role: 'owner',
+        joinedAt: new Date(),
+        user: {
+          id: 1,
+          name: 'Mock User',
+          email: 'user@example.com'
         }
       }
-    }
-  });
-
-  return result?.team || null;
+    ]
+  };
 }

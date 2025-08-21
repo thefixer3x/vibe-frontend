@@ -12,7 +12,7 @@ const EnvSchema = z.object({
   ADMIN_EMAIL: z.string().email().optional(),
   // Backup login (optional)
   BACKUP_LOGIN_ENABLED: z.string().optional(),
-  BACKUP_USER_EMAIL: z.string().email().optional(),
+  BACKUP_USER_EMAIL: z.string().optional(),
   BACKUP_USER_PASSWORD_HASH: z.string().optional(),
   BACKUP_USER_PASSWORD: z.string().optional(),
 

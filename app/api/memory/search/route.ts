@@ -6,10 +6,8 @@ const MEMORY_SERVICE_SECRET = process.env.MEMORY_SERVICE_SECRET;
 
 export async function POST(request: NextRequest) {
   try {
+    // Authentication disabled - use mock user
     const user = await getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = await request.json();
     

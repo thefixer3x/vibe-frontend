@@ -41,17 +41,15 @@ export function validatedActionWithUser<S extends z.ZodType<unknown, z.ZodTypeDe
   action: ValidatedActionWithUserFunction<S, T>
 ) {
   return async (prevState: ActionState, formData: FormData) => {
+    // Authentication disabled - always get mock user
     const user = await getUser();
-    if (!user) {
-      throw new Error('User is not authenticated');
-    }
 
     const result = schema.safeParse(Object.fromEntries(formData));
     if (!result.success) {
       return { error: result.error.errors[0].message };
     }
 
-    return action(result.data, formData, user);
+    return action(result.data, formData, user!);
   };
 }
 
@@ -62,16 +60,9 @@ type ActionWithTeamFunction<T> = (
 
 export function withTeam<T>(action: ActionWithTeamFunction<T>) {
   return async (formData: FormData): Promise<T> => {
-    const user = await getUser();
-    if (!user) {
-      redirect('/sign-in');
-    }
-
+    // Authentication disabled - always get mock team
     const team = await getTeamForUser();
-    if (!team) {
-      throw new Error('Team not found');
-    }
 
-    return action(formData, team);
+    return action(formData, team!);
   };
 }

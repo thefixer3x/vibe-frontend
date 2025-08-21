@@ -20,29 +20,19 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { data: user } = useSWR<User>('/api/user', fetcher);
   const router = useRouter();
 
-  async function handleSignOut() {
-    await signOut();
-    mutate('/api/user');
-    router.push('/');
-  }
+  // Authentication disabled - use mock user
+  const user = {
+    id: 1,
+    email: 'user@example.com',
+    name: 'Mock User',
+    role: 'owner'
+  };
 
-  if (!user) {
-    return (
-      <>
-        <Link
-          href="/pricing"
-          className="text-sm font-medium text-gray-700 hover:text-gray-900"
-        >
-          Pricing
-        </Link>
-        <Button asChild className="rounded-full">
-          <Link href="/dashboard">Dashboard</Link>
-        </Button>
-      </>
-    );
+  async function handleSignOut() {
+    // Authentication disabled - just redirect to home
+    router.push('/');
   }
 
   return (

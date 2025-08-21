@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { signIn } from '@/app/(login)/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,10 +10,18 @@ import { Label } from '@/components/ui/label';
 type ActionState = { error?: string; redirect?: string; email?: string };
 
 export default function SignInPage() {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     signIn,
     {}
   );
+
+  // Handle redirect when sign-in is successful
+  useEffect(() => {
+    if (state?.redirect) {
+      router.push(state.redirect);
+    }
+  }, [state?.redirect, router]);
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4">
