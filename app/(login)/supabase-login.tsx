@@ -15,7 +15,7 @@ import { CircleIcon, Loader2 } from 'lucide-react'
 
 export function SupabaseLogin({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams()
-  const router = useRouter()
+  const _router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('Supabase authentication is currently disabled. Please use the custom auth pages.')
   const [email, setEmail] = useState('')

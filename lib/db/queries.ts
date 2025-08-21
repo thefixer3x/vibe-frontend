@@ -1,7 +1,10 @@
-import { desc, and, eq, isNull } from 'drizzle-orm';
-import { activityLogs, teamMembers, teams, users } from './schema';
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth/session';
+import { eq } from 'drizzle-orm';
+import { teamMembers, teams, users } from './schema';
+// Unused imports commented out for auth-disabled mode:
+// import { desc, and, isNull } from 'drizzle-orm';
+// import { activityLogs } from './schema';
+// import { cookies } from 'next/headers';
+// import { verifyToken } from '@/lib/auth/session';
 
 export async function getUser() {
   // Authentication disabled - return mock user

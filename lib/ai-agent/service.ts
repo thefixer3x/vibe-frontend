@@ -210,7 +210,7 @@ Always be helpful, accurate, and provide context for your responses. If you use 
           return {
             content: `I have access to ${mcpTools.length} MCP tools for memory management:\n${mcpTools.map(t => `- ${t.name}: ${t.description}`).join('\n')}`
           };
-        } catch (error) {
+        } catch (_error) {
           // Fall through to standard tools
         }
       }
