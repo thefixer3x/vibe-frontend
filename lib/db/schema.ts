@@ -5,6 +5,7 @@ import {
   text,
   timestamp,
   integer,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -68,15 +69,34 @@ export const invitations = pgTable('invitations', {
   status: varchar('status', { length: 20 }).notNull().default('pending'),
 });
 
+export const apiKeys = pgTable('api_keys', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  service: varchar('service', { length: 50 }).notNull(), // 'stripe', 'openai', 'github', etc.
+  keyName: varchar('key_name', { length: 100 }).notNull(), // 'STRIPE_SECRET_KEY', 'OPENAI_API_KEY', etc.
+  encryptedValue: text('encrypted_value').notNull(), // Encrypted API key
+  isActive: boolean('is_active').notNull().default(true),
+  lastUsed: timestamp('last_used'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+});
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
   invitations: many(invitations),
+  apiKeys: many(apiKeys),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
+  apiKeysCreated: many(apiKeys),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -108,6 +128,17 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   }),
   user: one(users, {
     fields: [activityLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  team: one(teams, {
+    fields: [apiKeys.teamId],
+    references: [teams.id],
+  }),
+  createdBy: one(users, {
+    fields: [apiKeys.createdBy],
     references: [users.id],
   }),
 }));
