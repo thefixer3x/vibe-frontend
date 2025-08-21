@@ -1,23 +1,8 @@
 [build]
   command = "bun run build"
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-## Canonical domain redirect: send netlify.app traffic to custom domain
-[[redirects]]
-  from = "/*"
-  to = "https://vibeflows.grizzen.solutions/:splat"
-  status = 301
-  force = true
-  conditions = { Host = ["vibeflows.netlify.app"] }
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+  
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [build.environment]
   NODE_VERSION = "18"
