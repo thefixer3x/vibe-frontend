@@ -32,7 +32,7 @@ export default function ToolsHubPage() {
   const [query, setQuery] = useState('');
 
   const items = useMemo<ToolItem[]>(() => {
-    const list = (ALL_SERVICES as readonly string[]).map((name) => {
+    const list = ALL_SERVICES.map((name) => {
       const s = services?.[name as keyof typeof services];
       return {
         name,
