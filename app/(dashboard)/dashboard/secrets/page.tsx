@@ -34,6 +34,7 @@ import {
   Shield
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useSearchParams } from 'next/navigation';
 
 interface APIKey {
   id: number;
@@ -105,6 +106,7 @@ export default function SecretsPage() {
   const [revealedKeys, setRevealedKeys] = useState<Set<number>>(new Set());
   const [testingKeys, setTestingKeys] = useState<Set<number>>(new Set());
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   // Form states
   const [selectedService, setSelectedService] = useState('');
@@ -114,6 +116,14 @@ export default function SecretsPage() {
   useEffect(() => {
     fetchKeys();
   }, []);
+
+  useEffect(() => {
+    const svc = searchParams.get('service');
+    if (svc && SUPPORTED_SERVICES[svc]) {
+      setSelectedService(svc);
+      setShowCreateDialog(true);
+    }
+  }, [searchParams]);
 
   const fetchKeys = async () => {
     try {
@@ -229,7 +239,7 @@ export default function SecretsPage() {
         
         // Auto-hide after 30 seconds
         setTimeout(() => {
-          setRevealedKeys(prev => {
+          setRevealedKeys((prev: Set<number>) => {
             const newSet = new Set(prev);
             newSet.delete(id);
             return newSet;
@@ -267,7 +277,7 @@ export default function SecretsPage() {
       return;
     }
 
-    setTestingKeys(prev => new Set([...prev, key.id]));
+    setTestingKeys((prev: Set<number>) => new Set([...prev, key.id]));
 
     try {
       // Get the decrypted key value first
@@ -312,7 +322,7 @@ export default function SecretsPage() {
         variant: 'destructive'
       });
     } finally {
-      setTestingKeys(prev => {
+      setTestingKeys((prev: Set<number>) => {
         const newSet = new Set(prev);
         newSet.delete(key.id);
         return newSet;
