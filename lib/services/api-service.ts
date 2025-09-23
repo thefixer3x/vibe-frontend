@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { db } from '@/lib/db';
 import { apiKeys } from '@/lib/db/schema';
 import { decryptValue } from '@/lib/crypto/encryption';
