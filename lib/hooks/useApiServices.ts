@@ -1,29 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { apiServiceManager, type ServiceClients } from '@/lib/services/api-service';
+import useSWR from 'swr';
+import { ServiceClients } from '@/lib/services/api-service';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function useApiServices() {
-  const [services, setServices] = useState<ServiceClients | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, isLoading, mutate } = useSWR<ServiceClients>(
+    '/api/services',
+    fetcher
+  );
 
   const refreshServices = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const serviceClients = await apiServiceManager.getServiceClients();
-      setServices(serviceClients);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load services');
-    } finally {
-      setLoading(false);
-    }
+    await mutate();
   };
 
   const testService = async (serviceName: string) => {
     try {
-      const result = await apiServiceManager.testServiceConnection(serviceName);
+      const response = await fetch(`/api/services/test?service=${serviceName}`, {
+        method: 'POST',
+      });
+      const result = await response.json();
       await refreshServices(); // Refresh after test
       return result;
     } catch (err) {
@@ -34,62 +31,11 @@ export function useApiServices() {
     }
   };
 
-  const getServiceClient = async (serviceName: string) => {
-    try {
-      switch (serviceName.toLowerCase()) {
-        case 'stripe':
-          return await apiServiceManager.getStripeClient();
-        case 'openai':
-          return await apiServiceManager.getOpenAIClient();
-        case 'github':
-          return await apiServiceManager.getGitHubClient();
-        default:
-          throw new Error(`Service ${serviceName} not supported`);
-      }
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    refreshServices();
-  }, []);
-
   return {
-    services,
-    loading,
-    error,
+    services: data || null,
+    loading: isLoading,
+    error: error?.message || null,
     refreshServices,
     testService,
-    getServiceClient,
-  };
-}
-
-export function useApiKey(service: string, keyName?: string) {
-  const [key, setKey] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const getKey = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const apiKey = await apiServiceManager.getApiKey(service, keyName);
-      setKey(apiKey);
-      return apiKey;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to get API key';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return {
-    key,
-    loading,
-    error,
-    getKey,
   };
 }
