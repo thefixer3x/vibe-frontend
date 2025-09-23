@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -99,7 +99,7 @@ const SUPPORTED_SERVICES: Record<string, ServiceConfig> = {
   }
 };
 
-export default function SecretsPage() {
+const SecretsPage = () => {
   const [keys, setKeys] = useState<APIKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -108,19 +108,19 @@ export default function SecretsPage() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
 
-  // Form states
-  const [selectedService, setSelectedService] = useState('');
-  const [keyName, setKeyName] = useState('');
-  const [keyValue, setKeyValue] = useState('');
+  const selectedService = searchParams.get('service');
+  const initialSelectedService = selectedService && SUPPORTED_SERVICES[selectedService] ? selectedService : '';
+  const [selectedServiceState, setSelectedServiceState] = useState<string>(initialSelectedService);
+  const [keyName, setKeyName] = useState<string>('');
+  const [keyValue, setKeyValue] = useState<string>('');
 
   useEffect(() => {
     fetchKeys();
   }, []);
 
   useEffect(() => {
-    const svc = searchParams.get('service');
-    if (svc && SUPPORTED_SERVICES[svc]) {
-      setSelectedService(svc);
+    if (selectedService && SUPPORTED_SERVICES[selectedService]) {
+      setSelectedServiceState(selectedService);
       setShowCreateDialog(true);
     }
   }, [searchParams]);
@@ -150,7 +150,7 @@ export default function SecretsPage() {
   };
 
   const createKey = async () => {
-    if (!selectedService || !keyName || !keyValue) {
+    if (!selectedServiceState || !keyName || !keyValue) {
       toast({
         title: 'Error',
         description: 'Please fill in all fields',
@@ -164,9 +164,9 @@ export default function SecretsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          service: selectedService,
-          keyName: keyName,
-          keyValue: keyValue
+          service: selectedServiceState,
+          keyName,
+          keyValue
         })
       });
 
@@ -176,7 +176,7 @@ export default function SecretsPage() {
           description: 'API key created successfully',
         });
         setShowCreateDialog(false);
-        setSelectedService('');
+        setSelectedServiceState('');
         setKeyName('');
         setKeyValue('');
         fetchKeys();
@@ -236,7 +236,7 @@ export default function SecretsPage() {
       if (response.ok) {
         const data = await response.json();
         setRevealedKeys(prev => new Set([...prev, id]));
-        
+
         // Auto-hide after 30 seconds
         setTimeout(() => {
           setRevealedKeys((prev: Set<number>) => {
@@ -297,7 +297,7 @@ export default function SecretsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           service: key.service,
-          keyValue: keyValue
+          keyValue
         })
       });
 
@@ -360,16 +360,6 @@ export default function SecretsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <section className="flex-1 p-4 lg:p-8">
-        <div className="flex items-center justify-center h-64">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className="flex-1 p-4 lg:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -382,6 +372,18 @@ export default function SecretsPage() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               Securely store and manage your API keys and credentials
+              return (
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-64">
+                  <RefreshCw className="h-6 w-6 animate-spin" />
+                </div>
+              }
+            >
+              <section className="flex-1 p-4 lg:p-8">  
+              </section>  
+            </Suspense>
+            );
             </p>
           </div>
           
@@ -399,7 +401,7 @@ export default function SecretsPage() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="service">Service</Label>
-                  <Select value={selectedService} onValueChange={setSelectedService}>
+                  <Select value={selectedServiceState} onValueChange={setSelectedServiceState}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a service" />
                     </SelectTrigger>
@@ -414,9 +416,9 @@ export default function SecretsPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedService && (
+                  {selectedServiceState && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {SUPPORTED_SERVICES[selectedService].description}
+                      {SUPPORTED_SERVICES[selectedServiceState].description}
                     </p>
                   )}
                 </div>
