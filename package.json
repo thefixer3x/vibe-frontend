@@ -11,7 +11,11 @@
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "mcp:gateway": "npx tsx lib/mcp/gateway/unified-gateway.ts",
+    "mcp:dev": "VIBE_MCP_DEV=true npx tsx lib/mcp/gateway/unified-gateway.ts",
+    "mcp:test": "curl -s http://localhost:7777/health | npx json",
+    "mcp:config": "curl -s http://localhost:7777/config | npx json"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -55,11 +59,23 @@
     "tw-animate-css": "^1.3.8",
     "typescript": "^5.9.2",
     "vis-network": "^10.0.2",
-    "zod": "^4.1.11"
+    "zod": "^4.1.11",
+    "ws": "^8.18.3",
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "winston": "^3.17.0",
+    "axios": "^1.7.9",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "@types/dotenv": "^8.2.3",
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/ws": "^8.5.15",
+    "@types/jsonwebtoken": "^9.0.9",
     "eslint": "^9.36.0",
-    "eslint-config-next": "15.4.4"
+    "eslint-config-next": "15.4.4",
+    "tsx": "^4.11.2",
+    "json": "^11.0.0"
   }
 }
