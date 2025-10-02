@@ -4,10 +4,14 @@ import { env, boolFromEnv } from '@/lib/env';
 export async function GET() {
   try {
     if (!boolFromEnv(env.ENABLE_APPLE_CONNECT)) {
-      return NextResponse.json({ error: 'Apple Connect is disabled' }, { status: 501 });
+      return NextResponse.json({ 
+        status: 'disabled',
+        message: 'Apple Connect is disabled',
+        enabled: false
+      });
     }
 
-    // Use MCP Gateway to call App Store Connect tools
+    // Use MCP Gateway to call App Store Connect health check
     const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:7777';
     const response = await fetch(`${gatewayUrl}/mcp`, {
       method: 'POST',
@@ -19,8 +23,8 @@ export async function GET() {
         id: 1,
         method: 'tools/call',
         params: {
-          name: 'appstore_list_apps',
-          arguments: { limit: 50 }
+          name: 'appstore_health_check',
+          arguments: {}
         }
       })
     });
@@ -32,13 +36,27 @@ export async function GET() {
     const result = await response.json();
     
     if (result.error) {
-      throw new Error(result.error.message || 'MCP Gateway error');
+      return NextResponse.json({ 
+        status: 'error',
+        message: result.error.message || 'MCP Gateway error',
+        enabled: true,
+        error: result.error
+      });
     }
 
-    return NextResponse.json({ data: result.result });
+    return NextResponse.json({ 
+      status: 'healthy',
+      message: 'App Store Connect is working',
+      enabled: true,
+      details: result.result
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ 
+      status: 'error',
+      message,
+      enabled: true,
+      error: message
+    }, { status: 500 });
   }
 }
-
