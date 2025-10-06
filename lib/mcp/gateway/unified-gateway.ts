@@ -19,7 +19,8 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import WebSocket, { WebSocketServer } from 'ws';
 
-dotenv.config();
+// Load environment variables from vibe-frontend root
+dotenv.config({ path: '/root/vibe-frontend/.env.local' });
 
 const logger = winston.createLogger({
   level: 'info',
@@ -103,7 +104,24 @@ function handleWebSocketConnection(ws, serverPort) {
       const request = JSON.parse(message.toString());
       const { method, params, id } = request;
 
-      if (method === 'tools/list') {
+      if (method === 'initialize') {
+        ws.send(JSON.stringify({
+          jsonrpc: '2.0',
+          id,
+          result: {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+              tools: { listChanged: false },
+              prompts: { listChanged: false },
+              resources: { subscribe: false, listChanged: false }
+            },
+            serverInfo: {
+              name: 'seyederick-mcp',
+              version: '1.0.0'
+            }
+          }
+        }));
+      } else if (method === 'tools/list') {
         const { tools, sources } = await aggregateTools();
         ws.send(JSON.stringify({
           jsonrpc: '2.0',
@@ -387,7 +405,7 @@ const appStoreConnectBridge = new AppStoreConnectBridge(process.env);
 // MCP Source Registry
 const mcpSources = {
   'core': {
-    url: 'http://localhost:3002',
+    url: 'http://localhost:3001',
     name: 'MCP Core (Lanonasis)',
     tools: 18,
     categories: ['memory', 'api-keys', 'system', 'business'],
@@ -397,7 +415,7 @@ const mcpSources = {
     database: 'Supabase',
     protocols: {
       stdio: 3001,
-      http: 3002,
+      http: 3001,
       websocket: 3003,
       sse: 3004
     }
@@ -631,6 +649,25 @@ app.post('/mcp', async (req, res) => {
 
   try {
     switch (method) {
+      case 'initialize':
+        res.json({
+          jsonrpc: '2.0',
+          id,
+          result: {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+              tools: { listChanged: false },
+              prompts: { listChanged: false },
+              resources: { subscribe: false, listChanged: false }
+            },
+            serverInfo: {
+              name: 'seyederick-mcp',
+              version: '1.0.0'
+            }
+          }
+        });
+        break;
+
       case 'tools/list':
         const { tools, sources } = await aggregateTools();
         res.json({
@@ -725,7 +762,7 @@ app.post('/mcp', async (req, res) => {
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
-    service: 'Vibe Frontend MCP Gateway',
+    service: 'seyederick-mcp',
     version: '2.0.0',
     status: 'running',
     endpoints: {
@@ -743,7 +780,7 @@ app.get('/health', async (req, res) => {
 
   res.json({
     status: 'healthy',
-    service: 'Vibe Frontend MCP Gateway',
+    service: 'seyederick-mcp',
     timestamp: new Date().toISOString(),
     ports: {
       primary: PRIMARY_PORT,
