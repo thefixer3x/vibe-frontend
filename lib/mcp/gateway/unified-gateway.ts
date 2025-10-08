@@ -775,7 +775,23 @@ app.post('/mcp', async (req, res) => {
           }
         }
 
-        res.json(toolResult);
+        // Convert result to MCP content format for client compatibility
+        const mcpFormattedResult = {
+          jsonrpc: '2.0',
+          id: toolResult.id,
+          result: {
+            content: [
+              {
+                type: 'text',
+                text: typeof toolResult.result === 'string'
+                  ? toolResult.result
+                  : JSON.stringify(toolResult.result, null, 2)
+              }
+            ]
+          }
+        };
+
+        res.json(mcpFormattedResult);
         break;
 
       default:
