@@ -47,7 +47,7 @@ class MCPClient {
     this.config = {
       mode: config?.mode || 'auto',
       localServerUrl: config?.localServerUrl || process.env.NEXT_PUBLIC_MCP_SERVER_URL || defaultLocalUrl,
-      remoteApiUrl: config?.remoteApiUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://mcp.lanonasis.com',
+      remoteApiUrl: config?.remoteApiUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || '/api/mcp', // Use vibe-frontend proxy
       apiKey: config?.apiKey || process.env.NEXT_PUBLIC_MEMORY_API_KEY,
       userId: config?.userId
     };
@@ -225,8 +225,61 @@ class MCPClient {
     }
   }
 
+  private async callUnifiedMCPGateway(toolCall: MCPToolCall): Promise<MCPToolResult> {
+    // Call our unified MCP gateway at https://link.seyederick.com/mcp
+    try {
+      const response = await fetch('https://link.seyederick.com/mcp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Math.floor(Math.random() * 1000000),
+          method: 'tools/call',
+          params: {
+            name: toolCall.name,
+            arguments: toolCall.arguments
+          }
+        })
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+
+      const jsonRpcResult = await response.json();
+
+      if (jsonRpcResult.error) {
+        return {
+          success: false,
+          error: jsonRpcResult.error.message || 'Tool call failed'
+        };
+      }
+
+      return {
+        success: true,
+        data: jsonRpcResult.result
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
   private async callRemoteTool(toolCall: MCPToolCall): Promise<MCPToolResult> {
-    // Map MCP tool names to REST API endpoints
+    // First try the unified MCP gateway
+    const unifiedResult = await this.callUnifiedMCPGateway(toolCall);
+    if (unifiedResult.success) {
+      return unifiedResult;
+    }
+
+    // Fall back to legacy API mappings for memory tools
     const toolMappings: Record<string, {
       method: string;
       endpoint: (args: any) => string;
@@ -311,7 +364,34 @@ class MCPClient {
     const shouldUseRemote = this.shouldUseRemoteMode();
     
     if (shouldUseRemote) {
-      // Return hardcoded list for remote mode
+      // Fetch tools from unified MCP gateway
+      try {
+        const response = await fetch('https://link.seyederick.com/mcp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'tools/list'
+          })
+        });
+
+        if (response.ok) {
+          const jsonRpcResult = await response.json();
+          if (jsonRpcResult.result && jsonRpcResult.result.tools) {
+            return jsonRpcResult.result.tools.map((tool: any) => ({
+              name: tool.name,
+              description: tool.description || 'No description available'
+            }));
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to fetch tools from unified MCP gateway:', error);
+      }
+
+      // Fall back to hardcoded list if gateway fails
       return [
         { name: 'memory_create_memory', description: 'Create a new memory entry' },
         { name: 'memory_search_memories', description: 'Search memories using semantic search' },

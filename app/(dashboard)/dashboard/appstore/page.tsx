@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react';
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function AppStoreDashboardPage() {
+  const health = useSWR('/api/appstore/health', fetcher);
   const apps = useSWR('/api/appstore/apps', fetcher);
   const builds = useSWR('/api/appstore/builds', fetcher);
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
@@ -25,7 +26,25 @@ export default function AppStoreDashboardPage() {
 
   return (
     <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium mb-6">Apple App Store Connect</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-lg lg:text-2xl font-medium">Apple App Store Connect</h1>
+        <div className="flex items-center gap-2">
+          {health.isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {health.data && (
+            <Badge 
+              variant={health.data.status === 'healthy' ? 'default' : 'destructive'}
+              className="text-xs"
+            >
+              {health.data.status === 'healthy' ? '✅ Connected' : '❌ Error'}
+            </Badge>
+          )}
+          {health.error && (
+            <Badge variant="destructive" className="text-xs">
+              ❌ Connection Failed
+            </Badge>
+          )}
+        </div>
+      </div>
 
       <Tabs defaultValue="apps">
         <TabsList>
