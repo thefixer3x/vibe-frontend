@@ -721,16 +721,58 @@ app.post('/mcp', async (req, res) => {
         }
         // Handle HTTP MCP sources
         else {
-          const toolResponse = await axios.post(`${source.url}/mcp`, {
-            jsonrpc: '2.0',
-            id,
-            method: 'tools/call',
-            params: {
-              ...params,
-              name: originalToolName // Remove namespace for source
+          // Check if source has custom call endpoint (like mcp-core REST API)
+          if (source.callEndpoint) {
+            try {
+              const toolResponse = await axios.post(
+                `${source.url}${source.callEndpoint}/${originalToolName}`,
+                params.arguments || {},
+                {
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': process.env.MASTER_API_KEY || 'lano_master_key_2024'
+                  },
+                  timeout: 30000
+                }
+              );
+              // Check if response format is direct (not wrapped in JSON-RPC)
+              if (source.responseFormat === 'direct') {
+                // Unwrap REST API response format {success: true, data: {...}}
+                const restResponse = toolResponse.data;
+
+                if (restResponse.success === false) {
+                  // Handle error response
+                  throw new Error(restResponse.error || 'Tool execution failed');
+                }
+
+                // Extract the actual data from REST response
+                const actualData = restResponse.data || restResponse;
+
+                toolResult = {
+                  jsonrpc: '2.0',
+                  id,
+                  result: actualData
+                };
+              } else {
+                toolResult = toolResponse.data;
+              }
+            } catch (error) {
+              logger.error(`REST API tool execution error for ${originalToolName}:`, error.response?.data || error.message);
+              throw new Error(`Tool execution failed: ${error.response?.data?.message || error.message}`);
             }
-          });
-          toolResult = toolResponse.data;
+          } else {
+            // Standard MCP protocol format
+            const toolResponse = await axios.post(`${source.url}/mcp`, {
+              jsonrpc: '2.0',
+              id,
+              method: 'tools/call',
+              params: {
+                ...params,
+                name: originalToolName // Remove namespace for source
+              }
+            });
+            toolResult = toolResponse.data;
+          }
         }
 
         res.json(toolResult);
