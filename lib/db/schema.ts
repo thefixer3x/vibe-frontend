@@ -143,6 +143,107 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   }),
 }));
 
+// Memory Management Tables
+export const organizations = pgTable('organizations', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  plan: varchar('plan', { length: 50 }).notNull().default('free'),
+  features: text('features').$type<Record<string, any>>().default({}),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  status: varchar('status', { length: 20 }).notNull().default('active'),
+});
+
+export const projects = pgTable('projects', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  organizationId: varchar('organization_id', { length: 255 })
+    .notNull()
+    .references(() => organizations.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  status: varchar('status', { length: 20 }).notNull().default('active'),
+});
+
+export const memoryEntries = pgTable('memory_entries', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  title: varchar('title', { length: 500 }).notNull(),
+  content: text('content').notNull(),
+  type: varchar('type', { length: 50 }).notNull(),
+  tags: text('tags').$type<string[]>().default([]),
+  metadata: text('metadata').$type<Record<string, any>>().default({}),
+  userId: varchar('user_id', { length: 255 })
+    .notNull()
+    .references(() => users.id),
+  organizationId: varchar('organization_id', { length: 255 })
+    .references(() => organizations.id),
+  projectId: varchar('project_id', { length: 255 })
+    .references(() => projects.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  lastAccessed: timestamp('last_accessed'),
+  accessCount: integer('access_count').notNull().default(0),
+  relevanceScore: text('relevance_score').$type<number>().default(1.0),
+  isActive: boolean('is_active').notNull().default(true),
+});
+
+export const memoryTopics = pgTable('memory_topics', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  parentTopicId: varchar('parent_topic_id', { length: 255 })
+    .references(() => memoryTopics.id),
+  organizationId: varchar('organization_id', { length: 255 })
+    .notNull()
+    .references(() => organizations.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  memoryCount: integer('memory_count').notNull().default(0),
+});
+
+// Relations for new tables
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+  projects: many(projects),
+  memoryEntries: many(memoryEntries),
+  memoryTopics: many(memoryTopics),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [projects.organizationId],
+    references: [organizations.id],
+  }),
+  memoryEntries: many(memoryEntries),
+}));
+
+export const memoryEntriesRelations = relations(memoryEntries, ({ one }) => ({
+  user: one(users, {
+    fields: [memoryEntries.userId],
+    references: [users.id],
+  }),
+  organization: one(organizations, {
+    fields: [memoryEntries.organizationId],
+    references: [organizations.id],
+  }),
+  project: one(projects, {
+    fields: [memoryEntries.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const memoryTopicsRelations = relations(memoryTopics, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [memoryTopics.organizationId],
+    references: [organizations.id],
+  }),
+  parentTopic: one(memoryTopics, {
+    fields: [memoryTopics.parentTopicId],
+    references: [memoryTopics.id],
+  }),
+  childTopics: many(memoryTopics),
+}));
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Team = typeof teams.$inferSelect;
@@ -153,6 +254,14 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;
 export type NewInvitation = typeof invitations.$inferInsert;
+export type Organization = typeof organizations.$inferSelect;
+export type NewOrganization = typeof organizations.$inferInsert;
+export type Project = typeof projects.$inferSelect;
+export type NewProject = typeof projects.$inferInsert;
+export type MemoryEntry = typeof memoryEntries.$inferSelect;
+export type NewMemoryEntry = typeof memoryEntries.$inferInsert;
+export type MemoryTopic = typeof memoryTopics.$inferSelect;
+export type NewMemoryTopic = typeof memoryTopics.$inferInsert;
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
     user: Pick<User, 'id' | 'name' | 'email'>;
