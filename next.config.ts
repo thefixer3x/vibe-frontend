@@ -21,8 +21,8 @@ const SECURITY_HEADERS = [
       "style-src 'self' 'unsafe-inline'",
       // Allow eval for React fast-refresh in dev; Vercel strips it in prod builds
       "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-      // Connect to same-origin APIs and optional memory/MCP endpoints
-      "connect-src 'self' https://api.appstoreconnect.apple.com ws: wss:"
+      // Connect to same-origin APIs, MCP gateway, and optional endpoints
+      "connect-src 'self' https://api.appstoreconnect.apple.com https://link.seyederick.com ws: wss:"
     ].join('; ')
   }
 ];
