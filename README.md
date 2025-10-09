@@ -116,7 +116,7 @@ MIT License - feel free to use this project for your own needs.
 
 ## 🙏 Acknowledgments
 
-- Built on the excellent [Next.js SaaS Starter](https://github.com/nextjs/saas-starter)
+- Built on the excellent [Next.js]
 - UI components from [shadcn/ui](https://ui.shadcn.com/)
 - Icons from [Lucide React](https://lucide.dev/)
 
