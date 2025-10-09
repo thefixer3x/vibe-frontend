@@ -1,4 +1,3 @@
-import 'tw-animate-css';
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
