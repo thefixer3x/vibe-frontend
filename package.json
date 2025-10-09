@@ -78,5 +78,8 @@
     "eslint-config-next": "15.4.4",
     "json": "^11.0.0",
     "tsx": "^4.11.2"
+  },
+  "resolutions": {
+    "esbuild": "0.25.8"
   }
 }

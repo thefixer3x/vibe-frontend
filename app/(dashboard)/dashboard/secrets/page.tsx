@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
   DialogFooter
 } from '@/components/ui/dialog';
@@ -21,12 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Key, 
-  Plus, 
-  Trash2, 
-  Eye, 
-  EyeOff, 
+import {
+  Key,
+  Plus,
+  Trash2,
+  Eye,
+  EyeOff,
   TestTube,
   CheckCircle,
   XCircle,
@@ -99,7 +99,7 @@ const SUPPORTED_SERVICES: Record<string, ServiceConfig> = {
   }
 };
 
-const SecretsPage = () => {
+const SecretsPageContent = () => {
   const [keys, setKeys] = useState<APIKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -372,21 +372,9 @@ const SecretsPage = () => {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               Securely store and manage your API keys and credentials
-              return (
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center h-64">
-                  <RefreshCw className="h-6 w-6 animate-spin" />
-                </div>
-              }
-            >
-              <section className="flex-1 p-4 lg:p-8">  
-              </section>  
-            </Suspense>
-            );
             </p>
           </div>
-          
+
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button className="bg-blue-500 hover:bg-blue-600">
@@ -422,7 +410,7 @@ const SecretsPage = () => {
                     </p>
                   )}
                 </div>
-                
+
                 <div>
                   <Label htmlFor="keyName">Key Name</Label>
                   <Input
@@ -432,7 +420,7 @@ const SecretsPage = () => {
                     placeholder="e.g., STRIPE_SECRET_KEY"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="keyValue">API Key Value</Label>
                   <Input
@@ -464,7 +452,7 @@ const SecretsPage = () => {
           {Object.entries(SUPPORTED_SERVICES).slice(0, 3).map(([key, service]) => {
             const serviceKeys = keys.filter(k => k.service === key);
             const activeKeys = serviceKeys.filter(k => k.isActive);
-            
+
             return (
               <Card key={key}>
                 <CardHeader className="pb-3">
@@ -533,13 +521,13 @@ const SecretsPage = () => {
                             </p>
                           </div>
                         </div>
-                        
+
                         <div className="flex-1">
                           <p className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
                             {isRevealed ? '••••••••••••••••' : key.maskedValue}
                           </p>
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
                           <Badge variant={key.isActive ? 'default' : 'secondary'}>
                             {key.isActive ? 'Active' : 'Inactive'}
@@ -551,7 +539,7 @@ const SecretsPage = () => {
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         {service?.testable && (
                           <Button
@@ -567,7 +555,7 @@ const SecretsPage = () => {
                             )}
                           </Button>
                         )}
-                        
+
                         <Button
                           size="sm"
                           variant="outline"
@@ -575,7 +563,7 @@ const SecretsPage = () => {
                         >
                           {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
-                        
+
                         <Button
                           size="sm"
                           variant="outline"
@@ -587,7 +575,7 @@ const SecretsPage = () => {
                             <CheckCircle className="h-4 w-4 text-green-500" />
                           )}
                         </Button>
-                        
+
                         <Button
                           size="sm"
                           variant="outline"
@@ -605,5 +593,19 @@ const SecretsPage = () => {
         </Card>
       </div>
     </section>
+  );
+};
+
+export default function SecretsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-64">
+          <RefreshCw className="h-6 w-6 animate-spin" />
+        </div>
+      }
+    >
+      <SecretsPageContent />
+    </Suspense>
   );
 }
