@@ -20,6 +20,8 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import WebSocket, { WebSocketServer } from 'ws';
 import type { RawData } from 'ws';
+import { randomUUID } from 'crypto';
+import { Pool, PoolClient } from 'pg';
 
 // Type definitions
 interface BaseSourceConfig {
@@ -66,6 +68,29 @@ const logger = winston.createLogger({
     new winston.transports.File({ filename: '/var/log/mcp-gateway.log' })
   ]
 });
+
+// Database connection pooling for SSE workloads (Neon / Postgres)
+const NEON_DATABASE_URL = process.env.NEON_DATABASE_URL
+  || process.env.POSTGRES_URL
+  || process.env.DATABASE_URL
+  || process.env.POSTGRESQL_URL;
+
+const dbPool = NEON_DATABASE_URL
+  ? new Pool({
+      connectionString: NEON_DATABASE_URL,
+      max: parseInt(process.env.DB_POOL_MAX || '20', 10),
+      idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000', 10),
+      connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '5000', 10),
+      maxUses: parseInt(process.env.DB_POOL_MAX_USES || '7500', 10),
+      ssl: { rejectUnauthorized: false }
+    })
+  : null;
+
+if (dbPool) {
+  dbPool.on('error', (error) => {
+    logger.error('Database pool error:', error);
+  });
+}
 
 const app = express();
 const PRIMARY_PORT = parseInt(process.env.PRIMARY_PORT || process.env.PORT || '7777');
@@ -949,3 +974,51 @@ startServers().catch(error => {
   logger.error('Failed to start servers:', error);
   process.exit(1);
 });
+
+// Global error handlers for stability
+process.on('uncaughtException', (error) => {
+  logger.error('🚨 CRITICAL: Uncaught Exception:', error);
+  logger.error('Stack:', error.stack);
+  // Don't exit immediately - log and continue
+  // PM2 will restart if necessary
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('🚨 CRITICAL: Unhandled Rejection at:', promise);
+  logger.error('Reason:', reason);
+  // Don't exit - log and continue
+});
+
+// Graceful shutdown handlers
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`${signal} received. Starting graceful shutdown...`);
+  
+  try {
+    // Close database pool if exists
+    if (dbPool) {
+      logger.info('Closing database pool...');
+      await dbPool.end();
+    }
+    
+    // Close WebSocket connections
+    logger.info('Closing WebSocket connections...');
+    primaryWss.clients.forEach(client => client.close());
+    fallbackWss.clients.forEach(client => client.close());
+    
+    // Close HTTP servers
+    logger.info('Closing HTTP servers...');
+    await Promise.all([
+      new Promise(resolve => primaryServer.close(resolve)),
+      new Promise(resolve => fallbackServer.close(resolve))
+    ]);
+    
+    logger.info('✅ Graceful shutdown complete');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
