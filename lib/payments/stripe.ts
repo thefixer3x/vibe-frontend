@@ -8,7 +8,7 @@ import {
 } from '@/lib/db/queries';
 
 export const stripe = new Stripe((process.env.STRIPE_SECRET_KEY || 'sk_test_dummy_key_for_build').trim(), {
-  apiVersion: '2025-06-30.basil'
+  apiVersion: '2025-08-27.basil'
 });
 
 // Avoid noisy build-time logs when no real Stripe key is configured

@@ -31,24 +31,23 @@ class MCPClient {
   private onUpdateCallbacks: ((data: any) => void)[] = [];
 
   constructor(config?: Partial<MCPConfig>) {
-    // Decide a safe default for local MCP only when actually on localhost
+    // Fixed: Use stable MCP server endpoints
+    const defaultRemoteApiUrl = 'https://link.seyederick.com';
     let defaultLocalUrl: string | undefined = undefined;
+    
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
       if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) {
-        // Route through Onasis-CORE MCP server for enhanced 17-tool functionality
-        defaultLocalUrl = 'wss://mcp.lanonasis.com/mcp';
+        // Use remote gateway for local development too
+        defaultLocalUrl = 'wss://link.seyederick.com/ws';
       }
-    } else {
-      // Node context (SSR/build): leave undefined to avoid leaking localhost into client bundles
-      defaultLocalUrl = undefined;
     }
 
     this.config = {
       mode: config?.mode || 'auto',
       localServerUrl: config?.localServerUrl || process.env.NEXT_PUBLIC_MCP_SERVER_URL || defaultLocalUrl,
-      remoteApiUrl: config?.remoteApiUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || '/api/mcp', // Use vibe-frontend proxy
-      apiKey: config?.apiKey || process.env.NEXT_PUBLIC_MEMORY_API_KEY,
+      remoteApiUrl: config?.remoteApiUrl || process.env.NEXT_PUBLIC_GATEWAY_URL || defaultRemoteApiUrl, // Fixed: Use stable server
+      apiKey: config?.apiKey || process.env.NEXT_PUBLIC_MEMORY_API_KEY || 'vibe_frontend_key_2024', // Fixed: Add default API key
       userId: config?.userId
     };
   }
@@ -56,8 +55,8 @@ class MCPClient {
   async connect(): Promise<boolean> {
     try {
       let shouldUseRemote = this.shouldUseRemoteMode();
-      // If no local server URL is available, prefer remote (or no-connection) to avoid localhost attempts in prod
-      if (!this.config.localServerUrl) {
+      // Always prefer remote for stable server
+      if (this.config.remoteApiUrl && this.config.remoteApiUrl.includes('seyederick.com')) {
         shouldUseRemote = true;
       }
       
@@ -81,8 +80,8 @@ class MCPClient {
     if (this.config.mode === 'remote') return true;
     if (this.config.mode === 'local') return false;
     
-    // Auto mode: use remote if we have API key, otherwise local
-    return !!this.config.apiKey;
+    // Auto mode: prefer remote for stable server
+    return true;
   }
 
   private async connectLocal(): Promise<boolean> {
@@ -104,7 +103,6 @@ class MCPClient {
       console.log('Connected to local MCP server');
       return true;
     } catch (error) {
-      // Avoid noisy errors on production domains where no local server exists
       console.warn('Failed to connect to local MCP server:', error);
       this.isConnected = false;
       return false;
@@ -134,7 +132,8 @@ class MCPClient {
     // Only initialize SSE on client side
     if (typeof window === 'undefined') return;
     
-    const sseUrl = new URL('/api/sse', this.config.remoteApiUrl);
+    // Fixed: Use correct SSE endpoint for stable server
+    const sseUrl = new URL('/sse', this.config.remoteApiUrl);
     sseUrl.searchParams.set('apiKey', this.config.apiKey);
     if (this.config.userId) {
       sseUrl.searchParams.set('userId', this.config.userId);
@@ -142,6 +141,7 @@ class MCPClient {
     
     try {
       this.sseConnection = new EventSource(sseUrl.toString());
+      console.log('🔗 Connecting to SSE:', sseUrl.toString());
     } catch (error) {
       console.warn('Failed to initialize SSE connection:', error);
       return;
@@ -161,6 +161,10 @@ class MCPClient {
       const data = JSON.parse(event.data);
       this.notifyUpdateCallbacks({ type: 'memory.deleted', data });
     });
+
+    this.sseConnection.onopen = () => {
+      console.log('✅ SSE connection established');
+    };
     
     this.sseConnection.onerror = () => {
       console.error('SSE connection error');
@@ -232,6 +236,7 @@ class MCPClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(this.config.apiKey && { 'X-API-Key': this.config.apiKey })
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -370,6 +375,7 @@ class MCPClient {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(this.config.apiKey && { 'X-API-Key': this.config.apiKey })
           },
           body: JSON.stringify({
             jsonrpc: '2.0',
@@ -436,6 +442,20 @@ class MCPClient {
   getConnectionMode(): 'local' | 'remote' | 'disconnected' {
     if (!this.isConnected) return 'disconnected';
     return this.shouldUseRemoteMode() ? 'remote' : 'local';
+  }
+
+  // Health check method
+  async checkHealth(): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await fetch('https://link.seyederick.com/health');
+      if (!response.ok) {
+        throw new Error(`Health check failed: ${response.status}`);
+      }
+      const health = await response.json();
+      return { success: true, data: health };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
   }
 }
 

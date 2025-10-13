@@ -596,7 +596,7 @@ const SecretsPageContent = () => {
   );
 };
 
-export default function SecretsPage() {
+const SecretsPage = () => {
   return (
     <Suspense
       fallback={
@@ -608,4 +608,6 @@ export default function SecretsPage() {
       <SecretsPageContent />
     </Suspense>
   );
-}
+};
+
+export default SecretsPage;
