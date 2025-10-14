@@ -924,6 +924,72 @@ app.get('/health', async (req, res) => {
   });
 });
 
+// Server-Sent Events (SSE) endpoint for real-time updates
+app.get('/api/v1/events', (req, res) => {
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+  const clientId = `sse_${Date.now()}_${randomUUID().substring(0, 10)}`;
+  logger.info(`SSE client connected: ${clientId}`);
+
+  // Send initial connection event
+  res.write(`event: connected\n`);
+  res.write(`data: ${JSON.stringify({
+    clientId,
+    timestamp: new Date().toISOString(),
+    message: 'SSE connection established to Vibe MCP Gateway',
+    gateway: 'vibe-mcp',
+    port: PRIMARY_PORT
+  })}\n\n`);
+
+  // Send server info
+  res.write(`event: message\n`);
+  res.write(`data: ${JSON.stringify({
+    type: 'gateway_info',
+    data: {
+      gateway: 'vibe-mcp-unified-gateway',
+      version: '2.0.0',
+      sources: Object.keys(mcpSources).length,
+      timestamp: new Date().toISOString()
+    }
+  })}\n\n`);
+
+  // Send periodic heartbeat every 30 seconds
+  const heartbeatInterval = setInterval(() => {
+    res.write(`event: heartbeat\n`);
+    res.write(`data: ${JSON.stringify({
+      timestamp: new Date().toISOString(),
+      clientId
+    })}\n\n`);
+  }, 30000);
+
+  // Broadcast tool updates when sources change (optional enhancement)
+  const broadcastInterval = setInterval(async () => {
+    try {
+      const { tools, sources } = await aggregateTools();
+      res.write(`event: tools_update\n`);
+      res.write(`data: ${JSON.stringify({
+        totalTools: tools.length,
+        sources,
+        timestamp: new Date().toISOString()
+      })}\n\n`);
+    } catch (error) {
+      logger.error('Error broadcasting tools update:', error.message);
+    }
+  }, 60000); // Every 60 seconds
+
+  // Handle client disconnect
+  req.on('close', () => {
+    clearInterval(heartbeatInterval);
+    clearInterval(broadcastInterval);
+    logger.info(`SSE client disconnected: ${clientId}`);
+    res.end();
+  });
+});
+
 // Add new MCP source dynamically
 app.post('/admin/add-source', (req, res) => {
   const { id, url, name, categories } = req.body;
