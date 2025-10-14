@@ -782,7 +782,7 @@ app.post('/mcp', async (req, res) => {
         }
         // Handle bridge sources
         else if (source.bridge) {
-          const result = await source.bridge.executeTool(originalToolName, params.arguments);
+          const result = await source.bridge.executeTool(originalToolName, params.arguments || params);
           toolResult = {
             jsonrpc: '2.0',
             id,
