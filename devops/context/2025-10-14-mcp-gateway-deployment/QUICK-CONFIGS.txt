@@ -1,0 +1,224 @@
+═══════════════════════════════════════════════════════════════════
+🚀 VIBE-MCP GATEWAY - QUICK COPY-PASTE CONFIGS
+═══════════════════════════════════════════════════════════════════
+
+Gateway: http://168.231.74.29:7777 (or http://localhost:7777 if local)
+API Key: lano_master_key_2024
+Tools: 51 total (18 Core + 1 Auth + 15 Neon + 17 AppStore)
+
+═══════════════════════════════════════════════════════════════════
+📋 CLAUDE DESKTOP CONFIG (LOCAL VPS)
+═══════════════════════════════════════════════════════════════════
+
+Location: ~/Library/Application Support/Claude/claude_desktop_config.json
+
+{
+  "mcpServers": {
+    "vibe-mcp": {
+      "command": "node",
+      "args": ["/root/vibe-frontend/mcp-http-bridge.js"],
+      "env": {
+        "MCP_SERVER_URL": "http://localhost:7777/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}
+
+═══════════════════════════════════════════════════════════════════
+📋 CLAUDE DESKTOP CONFIG (REMOTE - FROM YOUR COMPUTER)
+═══════════════════════════════════════════════════════════════════
+
+First download bridge: scp root@168.231.74.29:/root/vibe-frontend/mcp-http-bridge.js ~/
+
+Then paste this config:
+
+{
+  "mcpServers": {
+    "vibe-mcp-remote": {
+      "command": "node",
+      "args": ["/Users/YOUR_USERNAME/mcp-http-bridge.js"],
+      "env": {
+        "MCP_SERVER_URL": "http://168.231.74.29:7777/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}
+
+═══════════════════════════════════════════════════════════════════
+🌐 DIRECT HTTP TEST (NO BRIDGE NEEDED)
+═══════════════════════════════════════════════════════════════════
+
+curl -X POST http://168.231.74.29:7777/mcp \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: lano_master_key_2024" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+═══════════════════════════════════════════════════════════════════
+📱 POSTMAN / INSOMNIA QUICK SETUP
+═══════════════════════════════════════════════════════════════════
+
+Method: POST
+URL: http://168.231.74.29:7777/mcp
+
+Headers:
+  Content-Type: application/json
+  x-api-key: lano_master_key_2024
+
+Body (List Tools):
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list"
+}
+
+Body (Create Memory):
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "core_create_memory",
+    "arguments": {
+      "title": "Test Memory",
+      "content": "Created via API",
+      "type": "note",
+      "tags": ["test"]
+    }
+  }
+}
+
+═══════════════════════════════════════════════════════════════════
+🔄 SSE CONNECTION (REAL-TIME UPDATES)
+═══════════════════════════════════════════════════════════════════
+
+curl -N http://168.231.74.29:7777/api/v1/events \
+  -H "Accept: text/event-stream" \
+  -H "x-api-key: lano_master_key_2024"
+
+Expected Output:
+  event: connected
+  data: {"clientId":"sse_...","timestamp":"...","message":"SSE connection established..."}
+
+  event: message
+  data: {"type":"gateway_info","data":{"gateway":"vibe-mcp-unified-gateway","sources":4}}
+
+  event: heartbeat (every 30 seconds)
+  data: {"timestamp":"...","clientId":"..."}
+
+═══════════════════════════════════════════════════════════════════
+🔌 WEBSOCKET CONNECTION
+═══════════════════════════════════════════════════════════════════
+
+Using websocat (install: cargo install websocat):
+
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}' | \
+  websocat ws://168.231.74.29:7777/ws
+
+═══════════════════════════════════════════════════════════════════
+✅ QUICK CONNECTION TEST
+═══════════════════════════════════════════════════════════════════
+
+# 1. Health Check
+curl -s http://168.231.74.29:7777/health -H "x-api-key: lano_master_key_2024" | jq .status
+
+# 2. Count Tools
+curl -s -X POST http://168.231.74.29:7777/mcp \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: lano_master_key_2024" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jq '.result.tools | length'
+
+# 3. Test Bridge (if on VPS)
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | node /root/vibe-frontend/mcp-http-bridge.js 2>/dev/null | jq '.result.tools | length'
+
+═══════════════════════════════════════════════════════════════════
+🛠️ TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════
+
+Problem: "Connection failed" in Claude Desktop
+Fix:
+  1. Check gateway: pm2 status vibe-mcp
+  2. Check logs: pm2 logs vibe-mcp --lines 20
+  3. Test endpoint: curl http://localhost:7777/health -H "x-api-key: lano_master_key_2024"
+  4. Restart: pm2 restart vibe-mcp
+
+Problem: "Cannot find module" error
+Fix: Check path to mcp-http-bridge.js in your config
+
+Problem: "Transport creation error"
+Fix: Gateway not running or wrong API key
+
+═══════════════════════════════════════════════════════════════════
+📚 AVAILABLE TOOLS (51 TOTAL)
+═══════════════════════════════════════════════════════════════════
+
+Core Memory (7):
+  • core_create_memory
+  • core_search_memories
+  • core_get_memory
+  • core_update_memory
+  • core_delete_memory
+  • core_list_memories
+  • core_search_lanonasis_docs
+
+Core API Keys (4):
+  • core_create_api_key
+  • core_list_api_keys
+  • core_rotate_api_key
+  • core_delete_api_key
+
+Core System (3):
+  • core_get_health_status
+  • core_get_auth_status
+  • core_get_organization_info
+
+Core Business (4):
+  • core_create_project
+  • core_list_projects
+  • core_get_config
+  • core_set_config
+
+Neon Database (15 tools)
+App Store Connect (17 tools)
+Quick Auth (1 tool)
+
+═══════════════════════════════════════════════════════════════════
+🌐 PRODUCTION URLS (WITH DOMAIN)
+═══════════════════════════════════════════════════════════════════
+
+If using domain: link.seyederick.com
+
+HTTP API: https://link.seyederick.com/mcp
+SSE: https://link.seyederick.com/api/v1/events
+WebSocket: wss://link.seyederick.com/ws
+Health: https://link.seyederick.com/health
+
+Claude Desktop Config with Domain:
+{
+  "mcpServers": {
+    "vibe-mcp": {
+      "command": "node",
+      "args": ["~/mcp-http-bridge.js"],
+      "env": {
+        "MCP_SERVER_URL": "https://link.seyederick.com/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}
+
+═══════════════════════════════════════════════════════════════════
+📞 SUPPORT
+═══════════════════════════════════════════════════════════════════
+
+Gateway Status: pm2 status vibe-mcp
+Gateway Logs: pm2 logs vibe-mcp
+Gateway Health: curl http://localhost:7777/health -H "x-api-key: lano_master_key_2024"
+Restart Gateway: pm2 restart vibe-mcp
+
+Gateway Version: 2.0.0
+Last Updated: 2025-10-14
+Status: ✅ Production Ready
+
+═══════════════════════════════════════════════════════════════════

@@ -1,0 +1,127 @@
+═══════════════════════════════════════════════════════════════════════════
+🎯 COPY & PASTE - CLAUDE DESKTOP CONFIGS (CHOOSE YOUR SCENARIO)
+═══════════════════════════════════════════════════════════════════════════
+
+📍 SCENARIO 1: Claude Desktop ON THE VPS (localhost connection)
+───────────────────────────────────────────────────────────────────────────
+
+Config Location: ~/.config/Claude/claude_desktop_config.json
+
+⚠️ IMPORTANT: Use 127.0.0.1 instead of localhost to get all 51 tools!
+
+{
+  "mcpServers": {
+    "vibe-mcp": {
+      "command": "node",
+      "args": ["/root/vibe-frontend/lib/mcp/stdio-wrapper.js"],
+      "env": {
+        "MCP_SERVER_URL": "http://127.0.0.1:7777/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}
+
+Test:
+curl -X POST http://127.0.0.1:7777/mcp -H "Content-Type: application/json" -H "x-api-key: lano_master_key_2024" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jq '.result.tools | length'
+Expected: 51
+
+WHY 127.0.0.1 NOT localhost?
+- localhost → IPv6 attempt fails → IPv4 fallback → mcp-core rate limited → 33 tools only
+- 127.0.0.1 → Direct IPv4 → No delays → All sources online → 51 tools ✅
+
+
+═══════════════════════════════════════════════════════════════════════════
+📍 SCENARIO 2: Claude Desktop ON YOUR LOCAL MACHINE (remote HTTPS)
+───────────────────────────────────────────────────────────────────════════
+
+Step 1 - Download bridge (run on your local machine):
+scp root@168.231.74.29:/root/vibe-frontend/mcp-http-bridge.js ~/mcp-http-bridge.js
+
+Step 2 - Config Location:
+- Mac: ~/Library/Application Support/Claude/claude_desktop_config.json
+- Windows: %APPDATA%\Claude\claude_desktop_config.json
+- Linux: ~/.config/Claude/claude_desktop_config.json
+
+Mac/Linux Config:
+{
+  "mcpServers": {
+    "vibe-mcp": {
+      "command": "node",
+      "args": ["/Users/YOUR_USERNAME/mcp-http-bridge.js"],
+      "env": {
+        "MCP_SERVER_URL": "https://link.seyederick.com/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}
+
+Windows Config:
+{
+  "mcpServers": {
+    "vibe-mcp": {
+      "command": "node",
+      "args": ["C:\\Users\\YOUR_USERNAME\\mcp-http-bridge.js"],
+      "env": {
+        "MCP_SERVER_URL": "https://link.seyederick.com/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}
+
+Test (run on your local machine):
+curl -X POST https://link.seyederick.com/mcp -H "Content-Type: application/json" -H "x-api-key: lano_master_key_2024" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jq '.result.tools | length'
+Expected: 51
+
+
+═══════════════════════════════════════════════════════════════════════════
+✅ SUCCESS INDICATORS
+───────────────────────────────────────────────────────────────────────────
+
+After restarting Claude Desktop, you should see:
+✅ 51 tools available in the MCP panel
+✅ Tools prefixed with: core_, neon_, appstore_, quick-auth_
+✅ No connection errors in Claude Desktop logs
+
+
+═══════════════════════════════════════════════════════════════════════════
+🔧 TROUBLESHOOTING
+───────────────────────────────────────────────────────────────────────────
+
+Problem: "No tools showing"
+Fix: Test the endpoint directly with curl (see test commands above)
+
+Problem: "Cannot find module"
+Fix: Check the path to the bridge script is correct
+
+Problem: "Connection refused"
+Fix: Check gateway is running: ssh root@168.231.74.29 "pm2 status vibe-mcp"
+
+Problem: "Transport creation error"
+Fix: Make sure Node.js is installed: node --version
+
+
+═══════════════════════════════════════════════════════════════════════════
+📊 AVAILABLE TOOLS (51 TOTAL)
+───────────────────────────────────────────────────────────────────────────
+
+Core Memory (7): create, search, get, update, delete, list, search_docs
+Core API Keys (4): create, list, rotate, delete
+Core System (3): health, auth, org_info
+Core Business (4): projects, config
+Neon Database (15): projects, queries, memory operations
+App Store Connect (17): apps, builds, TestFlight, analytics
+Quick Auth (1): health_check
+
+
+═══════════════════════════════════════════════════════════════════════════
+
+Gateway: Vibe-MCP Unified Gateway v2.0.0
+Port: 7777
+Domain: https://link.seyederick.com
+Status: ✅ Production Ready
+Tested: 2025-10-14 with 51 tools
+
+═══════════════════════════════════════════════════════════════════════════

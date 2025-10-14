@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "vibe-mcp-gateway": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:7777/api/v1/events"
+      ],
+      "env": {
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}

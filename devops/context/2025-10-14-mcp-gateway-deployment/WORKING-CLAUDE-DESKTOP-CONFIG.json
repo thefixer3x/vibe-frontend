@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "vibe-mcp-local": {
+      "command": "node",
+      "args": [
+        "/root/vibe-frontend/mcp-http-bridge.js"
+      ],
+      "env": {
+        "MCP_SERVER_URL": "http://localhost:7777/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    },
+    "vibe-mcp-https": {
+      "command": "node",
+      "args": [
+        "/root/vibe-frontend/mcp-http-bridge.js"
+      ],
+      "env": {
+        "MCP_SERVER_URL": "https://link.seyederick.com/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}

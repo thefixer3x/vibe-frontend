@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "vibe-mcp-local-vps": {
+      "command": "node",
+      "args": ["/root/vibe-frontend/lib/mcp/stdio-wrapper.js"],
+      "env": {
+        "MCP_SERVER_URL": "http://localhost:7777/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "vibe-mcp-remote": {
+      "command": "node",
+      "args": ["PATH_TO_YOUR_DOWNLOADED_BRIDGE"],
+      "env": {
+        "MCP_SERVER_URL": "https://link.seyederick.com/mcp",
+        "MCP_API_KEY": "lano_master_key_2024"
+      }
+    }
+  }
+}
