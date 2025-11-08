@@ -2,14 +2,25 @@ module.exports = {
   apps: [
     {
       name: 'vibe-mcp',
-      script: '/root/vibe-frontend/lib/mcp/gateway/unified-gateway.ts',
+      script: '/opt/lanonasis/vibe-frontend/lib/mcp/gateway/unified-gateway.ts',
       interpreter: 'tsx',
-      cwd: '/root/vibe-frontend',
+      cwd: '/opt/lanonasis/vibe-frontend',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
       watch: false,
       max_memory_restart: '500M',
+      // Enhanced metadata and monitoring
+      version: '2.1.0',
+      description: 'Unified MCP Gateway - Aggregates all MCP sources with bridge pattern for external clients',
+      author: 'lanonasis',
+      repository: 'https://github.com/thefixer3x/vibe-frontend.git',
+      license: 'MIT',
+      tags: ['mcp', 'gateway', 'unified', 'bridge', 'production'],
+      // Custom metrics and monitoring
+      pmx: true,
+      source_map_support: true,
+      trace: true,
       env: {
         NODE_ENV: 'production',
         PRIMARY_PORT: '7777',
@@ -43,7 +54,7 @@ module.exports = {
       increment_var: 'PORT_INCREMENT',
       // Monitoring
       ignore_watch: ['node_modules', '*.log', '.git'],
-      node_args: '--max-old-space-size=512'
+      node_args: '--max-old-space-size=512 --trace-warnings --trace-deprecation'
     }
   ]
 };

@@ -42,3 +42,4 @@ postgres_data/
 
 # Local Netlify folder
 .netlify
+ecosystem.config.js
