@@ -22,6 +22,7 @@ import WebSocket, { WebSocketServer } from 'ws';
 import type { RawData } from 'ws';
 import { randomUUID } from 'crypto';
 import { Pool, PoolClient } from 'pg';
+import { getMetrics } from './pm2-metrics';
 
 // Type definitions
 interface BaseSourceConfig {
@@ -69,6 +70,12 @@ const logger = winston.createLogger({
   ]
 });
 
+// Initialize PM2 metrics
+const metrics = getMetrics();
+metrics.connect().catch((err) => {
+  logger.error('Failed to initialize PM2 metrics:', err);
+});
+
 // Database connection pooling for SSE workloads (Neon / Postgres)
 const NEON_DATABASE_URL = process.env.NEON_DATABASE_URL
   || process.env.POSTGRES_URL
@@ -89,7 +96,18 @@ const dbPool = NEON_DATABASE_URL
 if (dbPool) {
   dbPool.on('error', (error) => {
     logger.error('Database pool error:', error);
+    metrics.recordDatabaseQuery(false);
   });
+  
+  // Update database metrics periodically
+  setInterval(() => {
+    const pool = dbPool as any;
+    metrics.updateDatabaseMetrics(
+      pool.totalCount || 0,
+      pool.totalCount - (pool.idleCount || 0),
+      pool.idleCount || 0
+    );
+  }, 5000);
 }
 
 const app = express();
@@ -201,6 +219,7 @@ function handleWebSocketConnection(ws: WebSocket, serverPort: number) {
         const toolName = params.name;
         const [sourceId] = toolName.split('_');
         const originalToolName = toolName.substring(sourceId.length + 1);
+        const startTime = Date.now();
 
         const source = mcpSources[sourceId];
         if (!source) {
@@ -209,31 +228,40 @@ function handleWebSocketConnection(ws: WebSocket, serverPort: number) {
 
         let result;
 
-        if (source.protocol === 'websocket' && source.connection) {
-          if (!source.connection.connected) {
-            throw new Error(`WebSocket connection to ${sourceId} is not available`);
+        try {
+          if (source.protocol === 'websocket' && source.connection) {
+            if (!source.connection.connected) {
+              throw new Error(`WebSocket connection to ${sourceId} is not available`);
+            }
+            result = await source.connection.callTool(originalToolName, params.arguments);
+          } else if (source.bridge) {
+            result = await source.bridge.executeTool(originalToolName, params.arguments);
+          } else {
+            const toolResponse = await axios.post(`${source.url}/mcp`, {
+              jsonrpc: '2.0',
+              id,
+              method: 'tools/call',
+              params: {
+                ...params,
+                name: originalToolName
+              }
+            });
+            result = toolResponse.data.result;
           }
-          result = await source.connection.callTool(originalToolName, params.arguments);
-        } else if (source.bridge) {
-          result = await source.bridge.executeTool(originalToolName, params.arguments);
-        } else {
-          const toolResponse = await axios.post(`${source.url}/mcp`, {
+
+          const responseTime = Date.now() - startTime;
+          metrics.recordToolCall(sourceId, originalToolName, true, responseTime);
+
+          ws.send(JSON.stringify({
             jsonrpc: '2.0',
             id,
-            method: 'tools/call',
-            params: {
-              ...params,
-              name: originalToolName
-            }
-          });
-          result = toolResponse.data.result;
+            result
+          }));
+        } catch (error) {
+          const responseTime = Date.now() - startTime;
+          metrics.recordToolCall(sourceId, originalToolName, false, responseTime);
+          throw error;
         }
-
-        ws.send(JSON.stringify({
-          jsonrpc: '2.0',
-          id,
-          result
-        }));
       } else {
         ws.send(JSON.stringify({
           jsonrpc: '2.0',
@@ -266,8 +294,31 @@ function handleWebSocketConnection(ws: WebSocket, serverPort: number) {
   });
 }
 
-primaryWss.on('connection', (ws) => handleWebSocketConnection(ws, PRIMARY_PORT));
-fallbackWss.on('connection', (ws) => handleWebSocketConnection(ws, FALLBACK_PORT));
+primaryWss.on('connection', (ws) => {
+  metrics.recordWebSocketConnection();
+  handleWebSocketConnection(ws, PRIMARY_PORT);
+  
+  ws.on('close', () => {
+    metrics.recordWebSocketDisconnection();
+  });
+  
+  ws.on('message', (message) => {
+    metrics.recordWebSocketMessage(false); // received
+  });
+});
+
+fallbackWss.on('connection', (ws) => {
+  metrics.recordWebSocketConnection();
+  handleWebSocketConnection(ws, FALLBACK_PORT);
+  
+  ws.on('close', () => {
+    metrics.recordWebSocketDisconnection();
+  });
+  
+  ws.on('message', (message) => {
+    metrics.recordWebSocketMessage(false); // received
+  });
+});
 
 // Middleware
 app.use(cors({
@@ -281,6 +332,19 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Metrics middleware for HTTP requests
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  
+  res.on('finish', () => {
+    const responseTime = Date.now() - startTime;
+    const success = res.statusCode >= 200 && res.statusCode < 400;
+    metrics.recordHttpRequest(req.path, success, responseTime);
+  });
+  
+  next();
+});
 
 // WebSocket connection manager
 class WebSocketMCPConnection {
@@ -707,7 +771,13 @@ async function aggregateTools() {
     } catch (error) {
       sourceStatus[sourceId] = { status: 'offline', error: error.message };
       logger.warn(`Failed to load tools from ${source.name}: ${error.message}`);
+      metrics.updateSourceHealth(sourceId, false);
     }
+  }
+
+  // Update source health metrics
+  for (const [sourceId, status] of Object.entries(sourceStatus)) {
+    metrics.updateSourceHealth(sourceId, status.status === 'online');
   }
 
   return { tools: allTools, sources: sourceStatus };
@@ -759,6 +829,7 @@ app.post('/mcp', async (req, res) => {
         const toolName = params.name;
         const [sourceId] = toolName.split('_');
         const originalToolName = toolName.substring(sourceId.length + 1);
+        const startTime = Date.now();
 
         const source = mcpSources[sourceId];
         if (!source) {
@@ -767,82 +838,91 @@ app.post('/mcp', async (req, res) => {
 
         let toolResult;
 
-        // Handle WebSocket sources
-        if (source.protocol === 'websocket' && source.connection) {
-          if (!source.connection.connected) {
-            throw new Error(`WebSocket connection to ${sourceId} is not available`);
-          }
-
-          const result = await source.connection.callTool(originalToolName, params.arguments);
-          toolResult = {
-            jsonrpc: '2.0',
-            id,
-            result
-          };
-        }
-        // Handle bridge sources
-        else if (source.bridge) {
-          const result = await source.bridge.executeTool(originalToolName, params.arguments);
-          toolResult = {
-            jsonrpc: '2.0',
-            id,
-            result
-          };
-        }
-        // Handle HTTP MCP sources
-        else {
-          // Check if source has custom call endpoint (like mcp-core REST API)
-          if (source.callEndpoint) {
-            try {
-              const toolResponse = await axios.post(
-                `${source.url}${source.callEndpoint}/${originalToolName}`,
-                params.arguments || {},
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'X-API-Key': process.env.MASTER_API_KEY || 'lano_master_key_2024'
-                  },
-                  timeout: 30000
-                }
-              );
-              // Check if response format is direct (not wrapped in JSON-RPC)
-              if (source.responseFormat === 'direct') {
-                // Unwrap REST API response format {success: true, data: {...}}
-                const restResponse = toolResponse.data;
-
-                if (restResponse.success === false) {
-                  // Handle error response
-                  throw new Error(restResponse.error || 'Tool execution failed');
-                }
-
-                // Extract the actual data from REST response
-                const actualData = restResponse.data || restResponse;
-
-                toolResult = {
-                  jsonrpc: '2.0',
-                  id,
-                  result: actualData
-                };
-              } else {
-                toolResult = toolResponse.data;
-              }
-            } catch (error) {
-              logger.error(`REST API tool execution error for ${originalToolName}:`, error.response?.data || error.message);
-              throw new Error(`Tool execution failed: ${error.response?.data?.message || error.message}`);
+        try {
+          // Handle WebSocket sources
+          if (source.protocol === 'websocket' && source.connection) {
+            if (!source.connection.connected) {
+              throw new Error(`WebSocket connection to ${sourceId} is not available`);
             }
-          } else {
-            // Standard MCP protocol format
-            const toolResponse = await axios.post(`${source.url}/mcp`, {
+
+            const result = await source.connection.callTool(originalToolName, params.arguments);
+            toolResult = {
               jsonrpc: '2.0',
               id,
-              method: 'tools/call',
-              params: {
-                ...params,
-                name: originalToolName // Remove namespace for source
-              }
-            });
-            toolResult = toolResponse.data;
+              result
+            };
           }
+          // Handle bridge sources
+          else if (source.bridge) {
+            const result = await source.bridge.executeTool(originalToolName, params.arguments);
+            toolResult = {
+              jsonrpc: '2.0',
+              id,
+              result
+            };
+          }
+          // Handle HTTP MCP sources
+          else {
+            // Check if source has custom call endpoint (like mcp-core REST API)
+            if (source.callEndpoint) {
+              try {
+                const toolResponse = await axios.post(
+                  `${source.url}${source.callEndpoint}/${originalToolName}`,
+                  params.arguments || {},
+                  {
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-API-Key': process.env.MASTER_API_KEY || 'lano_master_key_2024'
+                    },
+                    timeout: 30000
+                  }
+                );
+                // Check if response format is direct (not wrapped in JSON-RPC)
+                if (source.responseFormat === 'direct') {
+                  // Unwrap REST API response format {success: true, data: {...}}
+                  const restResponse = toolResponse.data;
+
+                  if (restResponse.success === false) {
+                    // Handle error response
+                    throw new Error(restResponse.error || 'Tool execution failed');
+                  }
+
+                  // Extract the actual data from REST response
+                  const actualData = restResponse.data || restResponse;
+
+                  toolResult = {
+                    jsonrpc: '2.0',
+                    id,
+                    result: actualData
+                  };
+                } else {
+                  toolResult = toolResponse.data;
+                }
+              } catch (error) {
+                logger.error(`REST API tool execution error for ${originalToolName}:`, error.response?.data || error.message);
+                throw new Error(`Tool execution failed: ${error.response?.data?.message || error.message}`);
+              }
+            } else {
+              // Standard MCP protocol format
+              const toolResponse = await axios.post(`${source.url}/mcp`, {
+                jsonrpc: '2.0',
+                id,
+                method: 'tools/call',
+                params: {
+                  ...params,
+                  name: originalToolName // Remove namespace for source
+                }
+              });
+              toolResult = toolResponse.data;
+            }
+          }
+
+          const responseTime = Date.now() - startTime;
+          metrics.recordToolCall(sourceId, originalToolName, true, responseTime);
+        } catch (error) {
+          const responseTime = Date.now() - startTime;
+          metrics.recordToolCall(sourceId, originalToolName, false, responseTime);
+          throw error;
         }
 
         // Convert result to MCP content format for client compatibility
@@ -934,6 +1014,15 @@ app.post('/admin/add-source', (req, res) => {
   res.json({ success: true, sources: Object.keys(mcpSources).length });
 });
 
+// Metrics endpoint
+app.get('/metrics', (req, res) => {
+  res.json({
+    status: 'ok',
+    metrics: metrics.getMetrics(),
+    timestamp: Date.now()
+  });
+});
+
 // Start both servers
 async function startServers() {
   // Start primary server (7777)
@@ -994,6 +1083,10 @@ const gracefulShutdown = async (signal: string) => {
   logger.info(`${signal} received. Starting graceful shutdown...`);
   
   try {
+    // Stop metrics collection
+    logger.info('Stopping metrics collection...');
+    metrics.stop();
+    
     // Close database pool if exists
     if (dbPool) {
       logger.info('Closing database pool...');
@@ -1021,4 +1114,5 @@ const gracefulShutdown = async (signal: string) => {
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
