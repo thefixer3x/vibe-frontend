@@ -65,13 +65,6 @@ export const MCP_SOURCES: Record<string, MCPSourceConfig> = {
     categories: ['ios', 'app-management', 'testflight', 'analytics'],
     bridge: 'appstore'
   },
-  'quick-auth': {
-    url: `http://localhost:3005`,
-    name: 'Quick Auth',
-    tools: 'auth-only',
-    categories: ['authentication', 'cli'],
-    endpoint: '/health'
-  },
   'context7': {
     url: `http://localhost:3007`,
     name: 'Context7 Documentation',
