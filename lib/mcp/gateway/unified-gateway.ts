@@ -53,10 +53,10 @@ interface WebSocketMCPConnection {
   connected: boolean;
 }
 
-type SourceKey = 'core' | 'quick-auth' | 'neon' | 'appstore';
+type SourceKey = 'core' | 'neon' | 'appstore';
 
 // Load environment variables from vibe-frontend root
-dotenv.config({ path: '/root/vibe-frontend/.env.local' });
+dotenv.config({ path: '/opt/lanonasis/vibe-frontend/.env.local' });
 
 const logger = winston.createLogger({
   level: 'info',
@@ -553,13 +553,6 @@ const mcpSources: Record<string, BaseSourceConfig> = {
       websocket: 3003,
       sse: 3004
     }
-  },
-  'quick-auth': {
-    url: 'http://localhost:3005',
-    name: 'Quick Auth Service',
-    tools: 'auth-only',
-    categories: ['authentication', 'cli'],
-    endpoint: '/health'
   },
   'neon': {
     url: 'internal',

@@ -43,3 +43,12 @@ postgres_data/
 # Local Netlify folder
 .netlify
 ecosystem.config.js
+
+# Security: Backup and sensitive files
+*.backup
+*.backup.*
+.env.backup*
+*.bak
+.env.*.backup
+.env.production.backup*
+fix_stats_function.js

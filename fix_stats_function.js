@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const { Client } = require('pg');
 
-const connectionString = 'postgresql://neondb_owner:npg_GHW9Qnk0NyrP@ep-icy-lake-ae91gu3w.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const connectionString = process.env.NEON_CONNECTION_STRING || process.env.DATABASE_URL;
 
 const sql = `
 CREATE OR REPLACE FUNCTION get_memory_stats(org_id varchar DEFAULT 'org_default')
