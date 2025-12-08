@@ -42,3 +42,4 @@ postgres_data/
 
 # Local Netlify folder
 .netlify
+env.example
