@@ -18,7 +18,9 @@ export async function GET() {
     },
     build_info: {
       next_version: 'Next.js app',
-      deployment_platform: process.env.VERCEL ? 'Vercel' : 'Other'
+      deployment_platform: process.env.VERCEL 
+        ? 'Vercel' 
+        : (process.env.NODE_ENV === 'production' && !process.env.VERCEL ? 'VPS' : 'Development')
     }
   };
 
