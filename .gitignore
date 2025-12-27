@@ -52,3 +52,4 @@ ecosystem.config.js
 .env.*.backup
 .env.production.backup*
 fix_stats_function.js
+ecosystem.config.js
