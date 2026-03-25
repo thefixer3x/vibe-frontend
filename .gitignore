@@ -53,3 +53,8 @@ ecosystem.config.js
 .env.production.backup*
 fix_stats_function.js
 ecosystem.config.js
+
+# Local IDE/agent settings (per-machine, not shared)
+.claude/settings.local.json
+.cursor/settings.local.json
+.windsurf/settings.local.json
