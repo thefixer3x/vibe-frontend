@@ -58,3 +58,6 @@ ecosystem.config.js
 .claude/settings.local.json
 .cursor/settings.local.json
 .windsurf/settings.local.json
+
+# Added by ggshield
+.cache_ggshield
