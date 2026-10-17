@@ -61,3 +61,11 @@ ecosystem.config.js
 
 # Added by ggshield
 .cache_ggshield
+
+# bun-only: block npm/yarn/pnpm lockfiles from being reintroduced
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npmrc
+.yarnrc
+.yarnrc.yml
